@@ -47,6 +47,7 @@ struct MainTabView: View {
             .onAppear {
                 customizeTabBar()
             }
+
             
             // Floating Scan button - replaces the middle tab item
             Button(action: {
@@ -86,6 +87,7 @@ struct MainTabView: View {
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.systemBlue]
         
+        
         UITabBar.appearance().standardAppearance = appearance
         if #available(iOS 15.0, *) {
             UITabBar.appearance().scrollEdgeAppearance = appearance
@@ -100,7 +102,6 @@ struct MainTabView: View {
                     // Hide the middle tab item
                     items[2].title = ""
                     items[2].image = UIImage()
-                    items[2].selectedImage = UIImage()
                 }
             }
         }

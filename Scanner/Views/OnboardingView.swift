@@ -18,8 +18,8 @@ struct OnboardingView: View {
             // Background gradient
             LinearGradient(
                 colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.1),
-                    Color(red: 0.1, green: 0.1, blue: 0.2)
+                    AppColors.backgroundDarkStart,
+                    AppColors.backgroundDarkEnd
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -35,7 +35,7 @@ struct OnboardingView: View {
                     }) {
                         Text("Skip")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(AppColors.textTertiary)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 10)
                     }
@@ -57,7 +57,7 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<pages.count, id: \.self) { index in
                         Circle()
-                            .fill(index == currentPage ? Color.white : Color.white.opacity(0.3))
+                            .fill(index == currentPage ? AppColors.pageIndicatorActive : AppColors.pageIndicatorInactive)
                             .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
                             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
                     }
@@ -78,12 +78,12 @@ struct OnboardingView: View {
                                 Text("Previous")
                             }
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.textPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.white.opacity(0.2))
+                                    .fill(AppColors.buttonSecondaryBackground)
                             )
                         }
                     }
@@ -104,7 +104,7 @@ struct OnboardingView: View {
                             }
                         }
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.textPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
@@ -209,12 +209,12 @@ struct OnboardingPageView: View {
             VStack(spacing: 16) {
                 Text(page.title)
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
                 
                 Text(page.description)
                     .font(.system(size: 18, weight: .regular))
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 40)
