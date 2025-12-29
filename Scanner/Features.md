@@ -6,6 +6,55 @@
 - **Persistence/Storage**: Supabase Database & Storage
 - **Local Storage**: UserDefaults (for onboarding state, preferences)
 
+## Data Model & Database Schema
+
+### Core Tables
+
+#### User (Supabase Auth)
+- Handled by Supabase Auth
+- User ID used as foreign key in other tables
+
+#### Document
+- `id` (UUID, primary key)
+- `user_id` (UUID, foreign key to auth.users)
+- `name` (string)
+- `created_at` (timestamp)
+- `updated_at` (timestamp)
+- `folder_id` (UUID, nullable, for organization)
+- `is_favorite` (boolean)
+- `page_count` (integer) - Number of pages in the document
+- `file_size` (bigint) - Total file size in bytes
+
+#### DocumentPage
+- `id` (UUID, primary key)
+- `document_id` (UUID, foreign key to Document)
+- `page_number` (integer, 1-indexed)
+- `image_url` (string, reference to storage)
+- `thumbnail_url` (string, reference to storage)
+- `created_at` (timestamp)
+
+#### Folder (optional)
+- `id` (UUID, primary key)
+- `user_id` (UUID, foreign key)
+- `name` (string)
+- `parent_id` (UUID, nullable, for nested folders)
+- `created_at` (timestamp)
+
+#### Tag (optional)
+- `id` (UUID, primary key)
+- `user_id` (UUID, foreign key)
+- `name` (string)
+- `color` (string, optional)
+
+#### DocumentTag (junction table)
+- `document_id` (UUID)
+- `tag_id` (UUID)
+
+### Storage Buckets
+
+- `documents` - Full resolution images/PDFs
+- `thumbnails` - Thumbnail images
+
 ## Core Features (MVP)
 
 1. **Scan Documents**
@@ -74,3 +123,14 @@
 4. Editing
 5. Merge
 6. Watermark/Sign/OCR (advanced features)
+
+
+## Markdown Formatting Reference
+
+- `#` - Level 1 heading (main title)
+- `##` - Level 2 heading (section)
+- `###` - Level 3 heading (subsection)
+- `-` - Bullet point/unordered list
+- `**text**` - Bold text
+- `` `text` `` - Inline code or field name
+- `1.` - Numbered list item
