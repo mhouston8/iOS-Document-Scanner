@@ -14,7 +14,7 @@ struct ScannerApp: App {
     var body: some Scene {
         WindowGroup {
             if hasCompletedOnboarding {
-                ContentView()
+                MainTabView()
             } else {
                 OnboardingView()
             }
