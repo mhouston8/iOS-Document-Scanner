@@ -1,5 +1,11 @@
 # Document Scanner App - Feature List
 
+## Architecture & Infrastructure
+
+- **Authentication**: Supabase Auth
+- **Persistence/Storage**: Supabase Database & Storage
+- **Local Storage**: UserDefaults (for onboarding state, preferences)
+
 ## Core Features (MVP)
 
 1. **Scan Documents**
@@ -50,9 +56,9 @@
    - Copy text from scans
 
 9. **Cloud Sync**
-   - iCloud integration
-   - Other cloud storage options
+   - Supabase Storage for document sync
    - Cross-device synchronization
+   - Automatic backup to cloud
 
 10. **Additional Organization**
     - Folders/categories
