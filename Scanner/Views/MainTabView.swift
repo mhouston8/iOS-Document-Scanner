@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @State private var showingScanner = false
+    @State private var scannedPages: [UIImage] = []
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,7 +28,7 @@ struct MainTabView: View {
                     .tag(1)
                 
                 // Hidden tab for Scan - floating button handles the UI
-                ScanView()
+                Color.clear
                     .tabItem {
                         Label("", systemImage: "")
                     }
@@ -47,13 +49,17 @@ struct MainTabView: View {
             .onAppear {
                 customizeTabBar()
             }
+            .onChange(of: selectedTab) { oldValue, newValue in
+                // Auto-open scanner when Scan tab is selected
+                if newValue == 2 {
+                    showingScanner = true
+                }
+            }
 
             
             // Floating Scan button - replaces the middle tab item
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 2
-                }
+                showingScanner = true
             }) {
                 ZStack {
                     Circle()
@@ -75,6 +81,23 @@ struct MainTabView: View {
             .offset(y: -5)
             .scaleEffect(selectedTab == 2 ? 1.1 : 1.0)
         }
+        .sheet(isPresented: $showingScanner) {
+            DocumentScannerView(scannedPages: $scannedPages)
+        }
+        .onChange(of: scannedPages) { oldValue, newValue in
+            if !newValue.isEmpty {
+                // Handle scanned pages
+                handleScannedPages(newValue)
+                scannedPages = []
+                // Switch to Files tab after scanning
+                selectedTab = 1
+            }
+        }
+    }
+    
+    private func handleScannedPages(_ images: [UIImage]) {
+        // TODO: Process and save scanned pages
+        print("Scanned \(images.count) pages")
     }
     
     private func customizeTabBar() {
