@@ -46,7 +46,7 @@
 - `name` (string)
 - `color` (string, optional)
 
-#### DocumentTag (junction table)
+#### DocumentTag (optional, junction table)
 - `document_id` (UUID)
 - `tag_id` (UUID)
 
