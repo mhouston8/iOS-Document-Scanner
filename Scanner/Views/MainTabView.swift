@@ -11,6 +11,8 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showingScanner = false
     @State private var scannedPages: [UIImage] = []
+    @State private var showingNamingDialog = false
+    @State private var documentName = ""
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -84,20 +86,45 @@ struct MainTabView: View {
         .sheet(isPresented: $showingScanner) {
             DocumentScannerView(scannedPages: $scannedPages)
         }
+        .sheet(isPresented: $showingNamingDialog) {
+            DocumentNamingView(
+                documentName: $documentName,
+                pageCount: scannedPages.count,
+                onSave: {
+                    saveDocument(name: documentName, images: scannedPages)
+                    scannedPages = []
+                    documentName = ""
+                    showingNamingDialog = false
+                    selectedTab = 1 // Switch to Files tab
+                },
+                onCancel: {
+                    scannedPages = []
+                    documentName = ""
+                    showingNamingDialog = false
+                }
+            )
+        }
         .onChange(of: scannedPages) { oldValue, newValue in
             if !newValue.isEmpty {
-                // Handle scanned pages
-                handleScannedPages(newValue)
-                scannedPages = []
-                // Switch to Files tab after scanning
-                selectedTab = 1
+                // Generate default name
+                documentName = generateDefaultDocumentName()
+                // Show naming dialog
+                showingNamingDialog = true
             }
         }
     }
     
-    private func handleScannedPages(_ images: [UIImage]) {
-        // TODO: Process and save scanned pages
-        print("Scanned \(images.count) pages")
+    private func generateDefaultDocumentName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return "Document \(formatter.string(from: Date()))"
+    }
+    
+    private func saveDocument(name: String, images: [UIImage]) {
+        // TODO: Save document to database
+        // For now, just print
+        print("Saving document '\(name)' with \(images.count) pages")
     }
     
     private func customizeTabBar() {
