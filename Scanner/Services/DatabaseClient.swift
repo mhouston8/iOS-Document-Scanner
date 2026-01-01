@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-protocol DatabaseClient {
+protocol DatabaseClientProtocol {
     // MARK: - Document Operations
     
     func saveDocument(_ document: Document, pages: [UIImage]) async throws

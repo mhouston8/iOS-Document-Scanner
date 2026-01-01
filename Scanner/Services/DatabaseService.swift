@@ -9,9 +9,9 @@ import Foundation
 import UIKit
 
 class DatabaseService {
-    private let client: DatabaseClient
+    private let client: DatabaseClientProtocol
     
-    init(client: DatabaseClient) {
+    init(client: DatabaseClientProtocol) {
         self.client = client
     }
     

@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-class SupabaseDatabaseClient: DatabaseClient {
+class SupabaseDatabaseClient: DatabaseClientProtocol {
     // TODO: Add Supabase client when integrating
     // private let supabaseClient: SupabaseClient
     
