@@ -8,15 +8,11 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
-    @State private var showingScanner = false
-    @State private var scannedPages: [UIImage] = []
-    @State private var showingNamingDialog = false
-    @State private var documentName = ""
+    @StateObject private var viewModel = MainTabViewModel()
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: $viewModel.selectedTab) {
                 HomeView()
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
@@ -51,29 +47,26 @@ struct MainTabView: View {
             .onAppear {
                 customizeTabBar()
             }
-            .onChange(of: selectedTab) { oldValue, newValue in
-                // Auto-open scanner when Scan tab is selected
-                if newValue == 2 {
-                    showingScanner = true
-                }
+            .onChange(of: viewModel.selectedTab) { oldValue, newValue in
+                viewModel.handleTabSelection(newValue)
             }
 
             
             // Floating Scan button - replaces the middle tab item
             Button(action: {
-                showingScanner = true
+                viewModel.openScanner()
             }) {
                 ZStack {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: selectedTab == 2 ? [Color.blue, Color.blue.opacity(0.8)] : [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
+                                colors: viewModel.selectedTab == 2 ? [Color.blue, Color.blue.opacity(0.8)] : [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 64, height: 64)
-                        .shadow(color: Color.blue.opacity(0.4), radius: selectedTab == 2 ? 12 : 8, x: 0, y: selectedTab == 2 ? 6 : 4)
+                        .shadow(color: Color.blue.opacity(0.4), radius: viewModel.selectedTab == 2 ? 12 : 8, x: 0, y: viewModel.selectedTab == 2 ? 6 : 4)
                     
                     Image(systemName: "camera.fill")
                         .font(.system(size: 28, weight: .bold))
@@ -81,50 +74,28 @@ struct MainTabView: View {
                 }
             }
             .offset(y: -5)
-            .scaleEffect(selectedTab == 2 ? 1.1 : 1.0)
+            .scaleEffect(viewModel.selectedTab == 2 ? 1.1 : 1.0)
         }
-        .sheet(isPresented: $showingScanner) {
-            DocumentScannerView(scannedPages: $scannedPages)
+        .sheet(isPresented: $viewModel.showingScanner) {
+            DocumentScannerView(scannedPages: $viewModel.scannedPages)
         }
-        .sheet(isPresented: $showingNamingDialog) {
+        .sheet(isPresented: $viewModel.showingNamingDialog) {
             DocumentNamingView(
-                documentName: $documentName,
-                pageCount: scannedPages.count,
+                documentName: $viewModel.documentName,
+                pageCount: viewModel.scannedPages.count,
                 onSave: {
-                    saveDocument(name: documentName, images: scannedPages)
-                    scannedPages = []
-                    documentName = ""
-                    showingNamingDialog = false
-                    selectedTab = 1 // Switch to Files tab
+                    viewModel.saveDocument(name: viewModel.documentName, images: viewModel.scannedPages)
                 },
                 onCancel: {
-                    scannedPages = []
-                    documentName = ""
-                    showingNamingDialog = false
+                    viewModel.cancelDocumentNaming()
                 }
             )
         }
-        .onChange(of: scannedPages) { oldValue, newValue in
+        .onChange(of: viewModel.scannedPages) { oldValue, newValue in
             if !newValue.isEmpty {
-                // Generate default name
-                documentName = generateDefaultDocumentName()
-                // Show naming dialog
-                showingNamingDialog = true
+                viewModel.handleScannedPages(newValue)
             }
         }
-    }
-    
-    private func generateDefaultDocumentName() -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return "Document \(formatter.string(from: Date()))"
-    }
-    
-    private func saveDocument(name: String, images: [UIImage]) {
-        // TODO: Save document to database
-        // For now, just print
-        print("Saving document '\(name)' with \(images.count) pages")
     }
     
     private func customizeTabBar() {
