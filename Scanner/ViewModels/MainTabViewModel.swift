@@ -17,6 +17,12 @@ class MainTabViewModel: ObservableObject {
     @Published var showingNamingDialog = false
     @Published var documentName = ""
     
+    private let databaseService: DatabaseService
+    
+    init(databaseService: DatabaseService? = nil) {
+        self.databaseService = databaseService ?? DatabaseService(client: SupabaseDatabaseClient())
+    }
+    
     func handleScannedPages(_ images: [UIImage]) {
         scannedPages = images
         documentName = generateDefaultDocumentName()
@@ -31,17 +37,24 @@ class MainTabViewModel: ObservableObject {
     }
     
     func saveDocument(name: String, images: [UIImage]) {
-        // TODO: Save document to database
-        // For now, just print
-        print("Saving document '\(name)' with \(images.count) pages")
-        
-        // Clear state after saving
-        scannedPages = []
-        documentName = ""
-        showingNamingDialog = false
-        
-        // Switch to Files tab
-        selectedTab = 1
+        Task {
+            do {
+                // TODO: Create Document model from name and images
+                // For now, just print
+                print("Saving document '\(name)' with \(images.count) pages")
+                
+                // await databaseService.saveDocument(document, pages: images)
+                
+                // Clear state after saving (already on MainActor since ViewModel is @MainActor)
+                scannedPages = []
+                documentName = ""
+                showingNamingDialog = false
+                selectedTab = 1 // Switch to Files tab
+            } catch {
+                // TODO: Handle error
+                print("Error saving document: \(error)")
+            }
+        }
     }
     
     func cancelDocumentNaming() {
