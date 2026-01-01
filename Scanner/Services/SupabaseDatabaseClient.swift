@@ -7,14 +7,16 @@
 
 import Foundation
 import UIKit
+import Supabase
 
 class SupabaseDatabaseClient: DatabaseClientProtocol {
-    // TODO: Add Supabase client when integrating
-    // private let supabaseClient: SupabaseClient
+    private let client: SupabaseClient
     
     init() {
-        // Initialize Supabase client when ready
-        // self.supabaseClient = SupabaseClient(...)
+        self.client = SupabaseClient(
+            supabaseURL: URL(string: SupabaseConfig.url)!,
+            supabaseKey: SupabaseConfig.publishableKey
+        )
     }
     
     // MARK: - Document Operations

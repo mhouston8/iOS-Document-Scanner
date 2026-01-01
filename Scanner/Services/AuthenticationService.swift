@@ -6,13 +6,16 @@
 //
 
 import Foundation
+import Supabase
 
 class AuthenticationService {
-    // TODO: Add Supabase Auth client when integrating
-    // private let auth: AuthClient
+    private let client: SupabaseClient
     
     init() {
-        // Initialize Supabase Auth client when ready
+        self.client = SupabaseClient(
+            supabaseURL: URL(string: SupabaseConfig.url)!,
+            supabaseKey: SupabaseConfig.publishableKey
+        )
     }
     
     // MARK: - Authentication State
