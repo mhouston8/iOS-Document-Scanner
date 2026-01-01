@@ -1,5 +1,5 @@
 //
-//  AuthService.swift
+//  AuthenticationService.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-class AuthService {
+class AuthenticationService {
     // TODO: Add Supabase Auth client when integrating
     // private let auth: AuthClient
     

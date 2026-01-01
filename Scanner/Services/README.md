@@ -28,7 +28,7 @@ let service = DatabaseService(client: MockDatabaseClient())
 ### Authentication Service - Direct Injection (Simpler, Still Testable)
 
 **Files:**
-- `AuthService.swift` - Direct Supabase Auth integration
+- `AuthenticationService.swift` - Direct Supabase Auth integration
 
 **Pattern:** Direct service implementation with dependency injection.
 
@@ -39,14 +39,14 @@ let service = DatabaseService(client: MockDatabaseClient())
 
 **Usage:**
 ```swift
-let authService = AuthService()
+let authService = AuthenticationService()
 // Or for testing:
-let authService = MockAuthService()
+let authService = MockAuthenticationService()
 ```
 
 ## Why Different Patterns?
 
 - **DatabaseService** uses protocol abstraction because we might want to support multiple database backends or need extensive testing flexibility.
-- **AuthService** uses direct injection because we're only using Supabase Auth and want a simpler, more straightforward implementation while still maintaining testability.
+- **AuthenticationService** uses direct injection because we're only using Supabase Auth and want a simpler, more straightforward implementation while still maintaining testability.
 
 Both patterns support dependency injection and are testable, but serve different needs based on complexity and flexibility requirements.
