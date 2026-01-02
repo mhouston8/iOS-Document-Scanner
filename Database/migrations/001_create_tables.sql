@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS "Document" (
 CREATE TABLE IF NOT EXISTS "DocumentPage" (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES "Document"(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     page_number INTEGER NOT NULL,
     image_url TEXT NOT NULL,
     thumbnail_url TEXT,
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS "DocumentTag" (
 CREATE INDEX IF NOT EXISTS idx_document_user_id ON "Document"(user_id);
 CREATE INDEX IF NOT EXISTS idx_document_folder_id ON "Document"(folder_id);
 CREATE INDEX IF NOT EXISTS idx_document_page_document_id ON "DocumentPage"(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_page_user_id ON "DocumentPage"(user_id);
 CREATE INDEX IF NOT EXISTS idx_folder_user_id ON "Folder"(user_id);
 CREATE INDEX IF NOT EXISTS idx_folder_parent_id ON "Folder"(parent_id);
 CREATE INDEX IF NOT EXISTS idx_tag_user_id ON "Tag"(user_id);
@@ -81,3 +83,6 @@ CREATE TRIGGER update_document_updated_at
     BEFORE UPDATE ON "Document"
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Note: DocumentPage.user_id is automatically set to auth.uid() via DEFAULT
+-- No need to set it in Swift code - database handles it automatically

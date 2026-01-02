@@ -25,46 +25,22 @@ CREATE POLICY "Users can delete their own documents"
     ON "Document" FOR DELETE
     USING (auth.uid() = user_id);
 
--- DocumentPage policies
+-- DocumentPage policies (simplified with user_id column)
 CREATE POLICY "Users can view pages of their own documents"
     ON "DocumentPage" FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM "Document"
-            WHERE "Document".id = "DocumentPage".document_id
-            AND "Document".user_id = auth.uid()
-        )
-    );
+    USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert pages to their own documents"
     ON "DocumentPage" FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM "Document"
-            WHERE "Document".id = "DocumentPage".document_id
-            AND "Document".user_id = auth.uid()
-        )
-    );
+    WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update pages of their own documents"
     ON "DocumentPage" FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM "Document"
-            WHERE "Document".id = "DocumentPage".document_id
-            AND "Document".user_id = auth.uid()
-        )
-    );
+    USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete pages of their own documents"
     ON "DocumentPage" FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM "Document"
-            WHERE "Document".id = "DocumentPage".document_id
-            AND "Document".user_id = auth.uid()
-        )
-    );
+    USING (auth.uid() = user_id);
 
 -- Folder policies
 CREATE POLICY "Users can view their own folders"

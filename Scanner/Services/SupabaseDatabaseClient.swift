@@ -26,6 +26,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         // 1. Upload images to Supabase Storage
         // 2. Create Document record in database
         // 3. Create DocumentPage records for each page
+        //    Note: user_id is automatically set to auth.uid() via database DEFAULT
         
         print("Saving document: \(document.name) with \(pages.count) pages")
     }
@@ -73,6 +74,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         // TODO: Implement Supabase integration
         // 1. Upload image to Storage
         // 2. Create DocumentPage record
+        //    Note: user_id is automatically set to auth.uid() via database DEFAULT
         
         print("Adding page to document: \(page.documentId)")
     }

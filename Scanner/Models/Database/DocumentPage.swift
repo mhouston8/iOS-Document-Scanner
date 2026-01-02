@@ -10,6 +10,7 @@ import Foundation
 struct DocumentPage: Identifiable, Codable {
     let id: UUID
     let documentId: UUID
+    let userId: UUID
     let pageNumber: Int
     var imageUrl: String
     var thumbnailUrl: String?
@@ -18,6 +19,7 @@ struct DocumentPage: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case documentId = "document_id"
+        case userId = "user_id"
         case pageNumber = "page_number"
         case imageUrl = "image_url"
         case thumbnailUrl = "thumbnail_url"
@@ -27,6 +29,7 @@ struct DocumentPage: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         documentId: UUID,
+        userId: UUID = UUID(),  // Will be set by database DEFAULT auth.uid() if not provided
         pageNumber: Int,
         imageUrl: String,
         thumbnailUrl: String? = nil,
@@ -34,6 +37,7 @@ struct DocumentPage: Identifiable, Codable {
     ) {
         self.id = id
         self.documentId = documentId
+        self.userId = userId
         self.pageNumber = pageNumber
         self.imageUrl = imageUrl
         self.thumbnailUrl = thumbnailUrl

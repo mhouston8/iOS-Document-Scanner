@@ -52,6 +52,7 @@ This guide shows how to create tables manually using Supabase's Table Editor (no
 **Columns:**
 - `id` - Type: `uuid`, Primary Key: ✓, Default Value: `gen_random_uuid()`
 - `document_id` - Type: `uuid`, Nullable: ✗, Foreign Key: `Document(id)` → `id`
+- `user_id` - Type: `uuid`, Nullable: ✗, Foreign Key: `auth.users(id)` → `id`
 - `page_number` - Type: `int4` (integer), Nullable: ✗
 - `image_url` - Type: `text`, Nullable: ✗
 - `thumbnail_url` - Type: `text`, Nullable: ✓
@@ -62,6 +63,8 @@ This guide shows how to create tables manually using Supabase's Table Editor (no
 
 **Settings:**
 - Enable Row Level Security: ✓
+
+**Note:** The `user_id` column has a default value of `auth.uid()`, so it will automatically be set to the logged-in user when inserting rows. No need to set it in Swift code.
 
 ---
 

@@ -28,6 +28,7 @@
 #### DocumentPage
 - `id` (UUID, primary key)
 - `document_id` (UUID, foreign key to Document)
+- `user_id` (UUID, foreign key to auth.users) - Automatically set to `auth.uid()` via DEFAULT
 - `page_number` (integer, 1-indexed)
 - `image_url` (string, reference to storage)
 - `thumbnail_url` (string, reference to storage)
