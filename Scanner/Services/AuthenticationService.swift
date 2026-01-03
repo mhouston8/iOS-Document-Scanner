@@ -7,8 +7,9 @@
 
 import Foundation
 import Supabase
+import Combine
 
-class AuthenticationService {
+class AuthenticationService: ObservableObject {
     private let client: SupabaseClient
     
     init() {
@@ -20,14 +21,17 @@ class AuthenticationService {
     
     // MARK: - Authentication State
     
-    var currentUserId: UUID? {
-        // TODO: Get current user ID from Supabase session
-        return nil
+    func currentUserId() async -> UUID? {
+        do {
+            let session = try await client.auth.session
+            return UUID(uuidString: session.user.id.uuidString)
+        } catch {
+            return nil
+        }
     }
     
-    var isAuthenticated: Bool {
-        // TODO: Check if user has valid session
-        return currentUserId != nil
+    func isAuthenticated() async -> Bool {
+        return await currentUserId() != nil
     }
     
     // MARK: - Sign Up
@@ -48,13 +52,20 @@ class AuthenticationService {
         print("Signing in user: \(email)")
     }
     
+    // MARK: - Anonymous Sign In
+    
+    func signInAnonymously() async throws {
+        // Sign in anonymously - creates a temporary user session
+        // This allows testing with RLS enabled
+        try await client.auth.signInAnonymously()
+        print("Signed in anonymously")
+    }
+    
     // MARK: - Sign Out
     
     func signOut() async throws {
-        // TODO: Implement Supabase Auth sign out
-        // await auth.signOut()
-        
-        print("Signing out user")
+        try await client.auth.signOut()
+        print("Signed out user")
     }
     
     // MARK: - Password Reset
@@ -69,17 +80,14 @@ class AuthenticationService {
     // MARK: - Session Management
     
     func getCurrentSession() async throws -> UUID? {
-        // TODO: Get current session and return user ID
-        // let session = await auth.session
-        // return session?.user.id
-        
-        return nil
+        // Get current session and return user ID
+        let session = try await client.auth.session
+        return UUID(uuidString: session.user.id.uuidString)
     }
     
     func refreshSession() async throws {
-        // TODO: Refresh authentication session
-        // await auth.refreshSession()
-        
-        print("Refreshing session")
+        // Refresh authentication session
+        try await client.auth.refreshSession()
+        print("Refreshed session")
     }
 }
