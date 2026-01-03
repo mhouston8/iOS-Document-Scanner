@@ -18,9 +18,14 @@ class MainTabViewModel: ObservableObject {
     @Published var documentName = ""
     
     private let databaseService: DatabaseService
+    private let authService: AuthenticationService
     
-    init(databaseService: DatabaseService? = nil) {
+    init(
+        databaseService: DatabaseService? = nil,
+        authService: AuthenticationService
+    ) {
         self.databaseService = databaseService ?? DatabaseService(client: SupabaseDatabaseClient())
+        self.authService = authService
     }
     
     func handleScannedPages(_ images: [UIImage]) {
@@ -39,20 +44,40 @@ class MainTabViewModel: ObservableObject {
     func saveDocument(name: String, images: [UIImage]) {
         Task {
             do {
-                // TODO: Create Document model from name and images
-                // For now, just print
-                print("Saving document '\(name)' with \(images.count) pages")
+                // 1. Get current user ID
+                guard let userId = await authService.currentUserId() else {
+                    print("Error: No authenticated user")
+                    // TODO: Show error alert to user
+                    return
+                }
                 
-                // await databaseService.saveDocument(document, pages: images)
+                // 2. Calculate file size (sum of JPEG data sizes)
+                let fileSize = images.reduce(Int64(0)) { total, image in
+                    let imageDataSize = image.jpegData(compressionQuality: 0.8)?.count ?? 0
+                    return total + Int64(imageDataSize)
+                }
                 
-                // Clear state after saving (already on MainActor since ViewModel is @MainActor)
+                // 3. Create Document model
+                let document = Document(
+                    userId: userId,
+                    name: name,
+                    pageCount: images.count,
+                    fileSize: fileSize
+                )
+                
+                // 4. Save document and pages to database
+                try await databaseService.saveDocument(document, pages: images)
+                
+                print("Successfully saved document '\(name)' with \(images.count) pages")
+                
+                // 5. Clear state after successful save
                 scannedPages = []
                 documentName = ""
                 showingNamingDialog = false
                 selectedTab = 1 // Switch to Files tab
             } catch {
-                // TODO: Handle error
                 print("Error saving document: \(error)")
+                // TODO: Show error alert to user
             }
         }
     }

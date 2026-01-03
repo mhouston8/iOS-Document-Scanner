@@ -8,7 +8,21 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @StateObject private var viewModel = MainTabViewModel()
+    @EnvironmentObject var authService: AuthenticationService
+    
+    var body: some View {
+        MainTabViewContent(authService: authService)
+    }
+}
+
+private struct MainTabViewContent: View {
+    let authService: AuthenticationService
+    @StateObject private var viewModel: MainTabViewModel
+    
+    init(authService: AuthenticationService) {
+        self.authService = authService
+        _viewModel = StateObject(wrappedValue: MainTabViewModel(authService: authService))
+    }
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -143,4 +157,5 @@ struct MainTabView: View {
 
 #Preview {
     MainTabView()
+        .environmentObject(AuthenticationService())
 }
