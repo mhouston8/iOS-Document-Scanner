@@ -1,5 +1,5 @@
 //
-//  HomeView.swift
+//  HomeViewOptionC.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct HomeView: View {
+// Option C: Tabbed Categories - Horizontal tabs to switch between categories
+struct HomeViewOptionC: View {
     @State private var selectedCategory: Category = .scan
     
     enum Category: String, CaseIterable {
@@ -21,6 +22,7 @@ struct HomeView: View {
             switch self {
             case .scan:
                 return [
+                    ActionItem(icon: "camera.fill", title: "Scan", color: .blue),
                     ActionItem(icon: "sparkles", title: "Smart Scan", color: .purple),
                     ActionItem(icon: "photo", title: "Import Photos", color: .blue),
                     ActionItem(icon: "folder", title: "Import Files", color: .green),
@@ -64,10 +66,13 @@ struct HomeView: View {
                 // Header
                 headerSection
                 
+                // Large Scan Button
+                scanButtonSection
+                
                 // Category Tabs
                 categoryTabsSection
                 
-                // Actions for Selected Category (with "All" button as last card)
+                // Actions for Selected Category
                 selectedCategoryActionsSection
                 
                 // Recent Documents
@@ -90,6 +95,33 @@ struct HomeView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    // MARK: - Scan Button
+    
+    private var scanButtonSection: some View {
+        Button(action: {
+            // TODO: Open scanner
+        }) {
+            HStack {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 24))
+                Text("Scan Document")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .foregroundColor(.white)
+            .cornerRadius(12)
+        }
     }
     
     // MARK: - Category Tabs
@@ -198,16 +230,13 @@ struct HomeView: View {
                 Image(systemName: action.icon)
                     .font(.system(size: 24))
                     .foregroundColor(action.color)
-                
                 Text(action.title)
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .aspectRatio(1, contentMode: .fit)
-            .padding(8)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
             .background(Color(.systemGray6))
             .cornerRadius(10)
         }
@@ -226,9 +255,8 @@ struct HomeView: View {
                 .font(.caption)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .aspectRatio(1, contentMode: .fit)
-        .padding(8)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
         .background(Color(.systemGray6))
         .cornerRadius(10)
     }
@@ -236,6 +264,6 @@ struct HomeView: View {
 
 #Preview {
     NavigationStack {
-        HomeView()
+        HomeViewOptionC()
     }
 }
