@@ -9,6 +9,42 @@ import Foundation
 import UIKit
 import Supabase
 
+// MARK: - Custom Errors
+
+enum StorageError: LocalizedError {
+    case conversionFailed(String)
+    case uploadFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .conversionFailed(let message):
+            return "Image conversion failed: \(message)"
+        case .uploadFailed(let message):
+            return "Storage upload failed: \(message)"
+        }
+    }
+}
+
+enum DatabaseError: LocalizedError {
+    case insertFailed(String)
+    case fetchFailed(String)
+    case updateFailed(String)
+    case deleteFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .insertFailed(let message):
+            return "Database insert failed: \(message)"
+        case .fetchFailed(let message):
+            return "Database fetch failed: \(message)"
+        case .updateFailed(let message):
+            return "Database update failed: \(message)"
+        case .deleteFailed(let message):
+            return "Database delete failed: \(message)"
+        }
+    }
+}
+
 class SupabaseDatabaseClient: DatabaseClientProtocol {
     private let client: SupabaseClient
     
@@ -22,61 +58,113 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
     // MARK: - Document Operations
     
     func saveDocument(_ document: Document, pages: [UIImage]) async throws {
-        // 1. Upload images to Supabase Storage
-        var pageUrls: [String] = []
+        // Track uploaded files for cleanup on error
+        var uploadedPaths: [String] = []
+        let uid = try await client.auth.session.user.id.uuidString.lowercased()
         
-        for (index, image) in pages.enumerated() {
-            let uid = try await client.auth.session.user.id.uuidString.lowercased()
-            let path = "\(uid)/\(document.id)/page_\(index + 1).jpg"
+        do {
+            // 1. Upload images to Supabase Storage
+            var pageUrls: [String] = []
             
-            // Convert UIImage to Data
-            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                throw NSError(domain: "SupabaseDatabaseClient", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to JPEG data"])
+            for (index, image) in pages.enumerated() {
+                let path = "\(uid)/\(document.id)/page_\(index + 1).jpg"
+                
+                // Convert UIImage to Data
+                guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                    let error = StorageError.conversionFailed("Failed to convert image \(index + 1) to JPEG data")
+                    print("ERROR [saveDocument]: \(error.localizedDescription)")
+                    throw error
+                }
+                
+                // Upload to Storage
+                do {
+                    try await client.storage
+                        .from(SupabaseConfig.documentsBucket)
+                        .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+                    uploadedPaths.append(path)
+                    
+                    // Get public URL
+                    let url = try client.storage
+                        .from(SupabaseConfig.documentsBucket)
+                        .getPublicURL(path: path)
+                    
+                    pageUrls.append(url.absoluteString)
+                } catch {
+                    let error = StorageError.uploadFailed("Failed to upload page \(index + 1): \(error.localizedDescription)")
+                    print("ERROR [saveDocument]: \(error.localizedDescription)")
+                    print("ERROR [saveDocument]: Original error: \(error)")
+                    throw error
+                }
             }
             
-            
-            // Upload to Storage
+            // 2. Create Document record in database
             do {
-                try await client.storage
-                    .from(SupabaseConfig.documentsBucket)
-                    .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
-                print("DEBUG: Successfully uploaded page \(index + 1)")
+                try await client.database
+                    .from("Document")
+                    .insert(document)
+                    .execute()
             } catch {
-                print("DEBUG: Upload failed for page \(index + 1): \(error)")
+                let error = DatabaseError.insertFailed("Failed to create document record: \(error.localizedDescription)")
+                print("ERROR [saveDocument]: \(error.localizedDescription)")
+                print("ERROR [saveDocument]: Original error: \(error)")
                 throw error
             }
             
-            // Get public URL
-            let url = try client.storage
-                .from(SupabaseConfig.documentsBucket)
-                .getPublicURL(path: path)
+            // 3. Create DocumentPage records for each page
+            // Note: user_id is automatically set to auth.uid() via database DEFAULT
+            for (index, imageUrl) in pageUrls.enumerated() {
+                let page = DocumentPage(
+                    documentId: document.id,
+                    userId: document.userId, // Placeholder - database DEFAULT will override
+                    pageNumber: index + 1,
+                    imageUrl: imageUrl
+                )
+                
+                do {
+                    try await client.database
+                        .from("DocumentPage")
+                        .insert(page)
+                        .execute()
+                } catch {
+                    let error = DatabaseError.insertFailed("Failed to create page \(index + 1) record: \(error.localizedDescription)")
+                    print("ERROR [saveDocument]: \(error.localizedDescription)")
+                    print("ERROR [saveDocument]: Original error: \(error)")
+                    throw error
+                }
+            }
             
-            pageUrls.append(url.absoluteString)
-        }
-        
-        // 2. Create Document record in database
-        try await client.database
-            .from("Document")
-            .insert(document)
-            .execute()
-        
-        // 3. Create DocumentPage records for each page
-        // Note: user_id is automatically set to auth.uid() via database DEFAULT
-        for (index, imageUrl) in pageUrls.enumerated() {
-            let page = DocumentPage(
-                documentId: document.id,
-                userId: document.userId, // Placeholder - database DEFAULT will override
-                pageNumber: index + 1,
-                imageUrl: imageUrl
-            )
+            print("Successfully saved document: \(document.name) with \(pages.count) pages")
             
-            try await client.database
-                .from("DocumentPage")
-                .insert(page)
-                .execute()
+        } catch {
+            print("ERROR [saveDocument]: Failed to save document '\(document.name)'")
+            print("ERROR [saveDocument]: Error type: \(type(of: error))")
+            print("ERROR [saveDocument]: Error description: \(error.localizedDescription)")
+            if let storageError = error as? StorageError {
+                print("ERROR [saveDocument]: Storage error: \(storageError.localizedDescription)")
+            } else if let databaseError = error as? DatabaseError {
+                print("ERROR [saveDocument]: Database error: \(databaseError.localizedDescription)")
+            } else {
+                print("ERROR [saveDocument]: Unexpected error: \(error)")
+            }
+            
+            // Cleanup: Delete uploaded files if database operations failed
+            if !uploadedPaths.isEmpty {
+                print("ERROR [saveDocument]: Cleaning up \(uploadedPaths.count) uploaded file(s)...")
+                for path in uploadedPaths {
+                    do {
+                        try await client.storage
+                            .from(SupabaseConfig.documentsBucket)
+                            .remove(paths: [path])
+                        print("ERROR [saveDocument]: Cleaned up file: \(path)")
+                    } catch {
+                        print("ERROR [saveDocument]: Warning - Failed to cleanup file \(path): \(error)")
+                    }
+                }
+            }
+            
+            // Re-throw the original error
+            throw error
         }
-        
-        print("Successfully saved document: \(document.name) with \(pages.count) pages")
     }
     
     func fetchDocuments(userId: UUID) async throws -> [Document] {
