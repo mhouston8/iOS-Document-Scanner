@@ -55,6 +55,29 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         )
     }
     
+    // MARK: - Helper Methods
+    
+    private func generateThumbnail(from image: UIImage, maxSize: CGFloat = 200) -> UIImage {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        var thumbnailSize: CGSize
+        if aspectRatio > 1 {
+            // Landscape
+            thumbnailSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+        } else {
+            // Portrait or square
+            thumbnailSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(thumbnailSize, false, 0.0)
+        image.draw(in: CGRect(origin: .zero, size: thumbnailSize))
+        let thumbnail = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return thumbnail ?? image
+    }
+    
     // MARK: - Document Operations
     
     func saveDocument(_ document: Document, pages: [UIImage]) async throws {
@@ -63,30 +86,40 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         let uid = try await client.auth.session.user.id.uuidString.lowercased()
         
         do {
-            // 1. Upload images to Supabase Storage
+            // 1. Upload images and thumbnails to Supabase Storage
             var pageUrls: [String] = []
+            var thumbnailUrls: [String?] = []
             
             for (index, image) in pages.enumerated() {
-                let path = "\(uid)/\(document.id)/page_\(index + 1).jpg"
+                let documentPath = "\(uid)/\(document.id)/page_\(index + 1).jpg"
+                let thumbnailPath = "\(uid)/\(document.id)/thumbnail_\(index + 1).jpg"
                 
-                // Convert UIImage to Data
+                // Convert UIImage to Data for full-size image
                 guard let imageData = image.jpegData(compressionQuality: 0.8) else {
                     let error = StorageError.conversionFailed("Failed to convert image \(index + 1) to JPEG data")
                     print("ERROR [saveDocument]: \(error.localizedDescription)")
                     throw error
                 }
                 
-                // Upload to Storage
+                // Generate thumbnail
+                let thumbnail = generateThumbnail(from: image)
+                guard let thumbnailData = thumbnail.jpegData(compressionQuality: 0.7) else {
+                    let error = StorageError.conversionFailed("Failed to convert thumbnail \(index + 1) to JPEG data")
+                    print("ERROR [saveDocument]: \(error.localizedDescription)")
+                    throw error
+                }
+                
+                // Upload full-size image to Storage
                 do {
                     try await client.storage
                         .from(SupabaseConfig.documentsBucket)
-                        .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
-                    uploadedPaths.append(path)
+                        .upload(documentPath, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+                    uploadedPaths.append(documentPath)
                     
-                    // Get public URL
+                    // Get public URL for full-size image
                     let url = try client.storage
                         .from(SupabaseConfig.documentsBucket)
-                        .getPublicURL(path: path)
+                        .getPublicURL(path: documentPath)
                     
                     pageUrls.append(url.absoluteString)
                 } catch {
@@ -94,6 +127,25 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     print("ERROR [saveDocument]: \(error.localizedDescription)")
                     print("ERROR [saveDocument]: Original error: \(error)")
                     throw error
+                }
+                
+                // Upload thumbnail to Storage
+                do {
+                    try await client.storage
+                        .from(SupabaseConfig.thumbnailsBucket)
+                        .upload(thumbnailPath, data: thumbnailData, options: FileOptions(contentType: "image/jpeg"))
+                    uploadedPaths.append(thumbnailPath)
+                    
+                    // Get public URL for thumbnail
+                    let thumbnailUrl = try client.storage
+                        .from(SupabaseConfig.thumbnailsBucket)
+                        .getPublicURL(path: thumbnailPath)
+                    
+                    thumbnailUrls.append(thumbnailUrl.absoluteString)
+                } catch {
+                    print("WARNING [saveDocument]: Failed to upload thumbnail \(index + 1): \(error)")
+                    // Don't fail the whole operation if thumbnail upload fails
+                    thumbnailUrls.append(nil)
                 }
             }
             
@@ -117,7 +169,8 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     documentId: document.id,
                     userId: document.userId, // Placeholder - database DEFAULT will override
                     pageNumber: index + 1,
-                    imageUrl: imageUrl
+                    imageUrl: imageUrl,
+                    thumbnailUrl: index < thumbnailUrls.count ? thumbnailUrls[index] : nil
                 )
                 
                 do {
@@ -152,8 +205,10 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                 print("ERROR [saveDocument]: Cleaning up \(uploadedPaths.count) uploaded file(s)...")
                 for path in uploadedPaths {
                     do {
+                        // Determine which bucket based on path
+                        let bucket = path.contains("thumbnail") ? SupabaseConfig.thumbnailsBucket : SupabaseConfig.documentsBucket
                         try await client.storage
-                            .from(SupabaseConfig.documentsBucket)
+                            .from(bucket)
                             .remove(paths: [path])
                         print("ERROR [saveDocument]: Cleaned up file: \(path)")
                     } catch {
