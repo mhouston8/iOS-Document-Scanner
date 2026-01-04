@@ -44,7 +44,7 @@ This guide shows how to run the SQL migration files to set up your Supabase data
 - Creates policies so users can only access their own data
 - Sets up INSERT, SELECT, UPDATE, DELETE policies for each table
 
-### 4. Verify Tables Were Created
+### 6. Verify Tables Were Created
 
 1. Go to **Table Editor** in Supabase Dashboard
 2. You should see all tables:
@@ -54,13 +54,19 @@ This guide shows how to run the SQL migration files to set up your Supabase data
    - `Tag`
    - `DocumentTag`
 
-### 5. Verify RLS is Enabled
+### 7. Verify RLS is Enabled
 
 1. Go to **Authentication** → **Policies**
 2. You should see policies for each table
 3. Or check table settings - RLS should be enabled
 
-### 6. Create Storage Buckets
+### 8. Verify Storage Policies
+
+1. Go to **Storage** → **Policies** in Supabase Dashboard
+2. You should see policies for both `documents` and `thumbnails` buckets
+3. Policies should allow INSERT, SELECT, UPDATE, DELETE for authenticated users
+
+### 4. Create Storage Buckets
 
 1. Go to **Storage** in Supabase Dashboard
 2. Click **"New bucket"**
@@ -72,6 +78,20 @@ This guide shows how to run the SQL migration files to set up your Supabase data
    - Name: `thumbnails`
    - Public: **No** (Private) or **Yes** (Public - your choice)
    - Click **"Create bucket"**
+
+### 5. Run Third Migration (Storage RLS Policies)
+
+1. Open the file: `Database/migrations/003_create_storage_policies.sql`
+2. Copy the entire contents
+3. Paste into the SQL Editor in Supabase
+4. Click **"Run"**
+5. Wait for success message
+
+**What this does:**
+- Creates Row Level Security policies for storage buckets
+- Allows authenticated users to upload/read/update/delete files in their own folders
+- Ensures users can only access files in paths matching their user ID
+- Applies to both `documents` and `thumbnails` buckets
 
 ## Troubleshooting
 
@@ -98,14 +118,16 @@ This guide shows how to run the SQL migration files to set up your Supabase data
 ## Migration Files
 
 - **001_create_tables.sql** - Creates all tables, indexes, and triggers
-- **002_create_rls_policies.sql** - Sets up Row Level Security policies
+- **002_create_rls_policies.sql** - Sets up Row Level Security policies for database tables
+- **003_create_storage_policies.sql** - Sets up Row Level Security policies for storage buckets
 
 ## After Migration
 
 Once migrations are complete:
 1. ✅ Tables created
-2. ✅ RLS enabled
+2. ✅ Database RLS enabled
 3. ✅ Storage buckets created
-4. ✅ Ready to use in app!
+4. ✅ Storage RLS policies enabled
+5. ✅ Ready to use in app!
 
 You can now test saving documents from your app.
