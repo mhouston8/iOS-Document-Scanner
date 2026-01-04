@@ -46,7 +46,7 @@ private struct MainTabViewContent: View {
                     }
                     .tag(2)
                 
-                ActionsView()
+                AllActionsView()
                     .tabItem {
                         Label("Actions", systemImage: "square.stack.3d.up.fill")
                     }
