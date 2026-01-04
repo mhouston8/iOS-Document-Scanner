@@ -22,13 +22,61 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
     // MARK: - Document Operations
     
     func saveDocument(_ document: Document, pages: [UIImage]) async throws {
-        // TODO: Implement Supabase integration
         // 1. Upload images to Supabase Storage
-        // 2. Create Document record in database
-        // 3. Create DocumentPage records for each page
-        //    Note: user_id is automatically set to auth.uid() via database DEFAULT
+        var pageUrls: [String] = []
         
-        print("Saving document: \(document.name) with \(pages.count) pages")
+        for (index, image) in pages.enumerated() {
+            let uid = try await client.auth.session.user.id.uuidString.lowercased()
+            let path = "\(uid)/\(document.id)/page_\(index + 1).jpg"
+            
+            // Convert UIImage to Data
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                throw NSError(domain: "SupabaseDatabaseClient", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to JPEG data"])
+            }
+            
+            
+            // Upload to Storage
+            do {
+                try await client.storage
+                    .from(SupabaseConfig.documentsBucket)
+                    .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+                print("DEBUG: Successfully uploaded page \(index + 1)")
+            } catch {
+                print("DEBUG: Upload failed for page \(index + 1): \(error)")
+                throw error
+            }
+            
+            // Get public URL
+            let url = try client.storage
+                .from(SupabaseConfig.documentsBucket)
+                .getPublicURL(path: path)
+            
+            pageUrls.append(url.absoluteString)
+        }
+        
+        // 2. Create Document record in database
+        try await client.database
+            .from("Document")
+            .insert(document)
+            .execute()
+        
+        // 3. Create DocumentPage records for each page
+        // Note: user_id is automatically set to auth.uid() via database DEFAULT
+        for (index, imageUrl) in pageUrls.enumerated() {
+            let page = DocumentPage(
+                documentId: document.id,
+                userId: document.userId, // Placeholder - database DEFAULT will override
+                pageNumber: index + 1,
+                imageUrl: imageUrl
+            )
+            
+            try await client.database
+                .from("DocumentPage")
+                .insert(page)
+                .execute()
+        }
+        
+        print("Successfully saved document: \(document.name) with \(pages.count) pages")
     }
     
     func fetchDocuments(userId: UUID) async throws -> [Document] {

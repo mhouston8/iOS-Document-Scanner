@@ -77,6 +77,7 @@ class MainTabViewModel: ObservableObject {
                 selectedTab = 1 // Switch to Files tab
             } catch {
                 print("Error saving document: \(error)")
+                print("")
                 // TODO: Show error alert to user
             }
         }
