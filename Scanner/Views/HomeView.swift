@@ -8,6 +8,16 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject var authService: AuthenticationService
+    
+    var body: some View {
+        HomeViewContent(authService: authService)
+    }
+}
+
+private struct HomeViewContent: View {
+    let authService: AuthenticationService
+    @StateObject private var viewModel: HomeViewModel
     @State private var selectedCategory: Category = .scan
     
     enum Category: String, CaseIterable {
@@ -58,6 +68,15 @@ struct HomeView: View {
         }
     }
     
+    init(authService: AuthenticationService) {
+        self.authService = authService
+        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+        _viewModel = StateObject(wrappedValue: HomeViewModel(
+            databaseService: databaseService,
+            authService: authService
+        ))
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -76,6 +95,11 @@ struct HomeView: View {
             .padding()
         }
         .navigationTitle("Home")
+        .onAppear {
+            if viewModel.recentDocuments.isEmpty {
+                viewModel.loadRecentDocuments()
+            }
+        }
     }
     
     // MARK: - Header
@@ -85,7 +109,7 @@ struct HomeView: View {
             Text("Welcome")
                 .font(.title)
                 .fontWeight(.bold)
-            Text("You have 12 documents")
+            Text("You have \(viewModel.documentCount) document\(viewModel.documentCount == 1 ? "" : "s")")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -161,31 +185,87 @@ struct HomeView: View {
             Text("Recent Documents")
                 .font(.headline)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(0..<5) { index in
-                        recentDocumentCard(index: index)
+            if viewModel.isLoading {
+                HStack {
+                    ProgressView()
+                        .padding()
+                    Spacer()
+                }
+            } else if viewModel.recentDocuments.isEmpty {
+                Text("No recent documents")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.recentDocuments) { recentDoc in
+                            recentDocumentCard(recentDoc: recentDoc)
+                        }
                     }
                 }
             }
         }
     }
     
-    private func recentDocumentCard(index: Int) -> some View {
+    private func recentDocumentCard(recentDoc: RecentDocument) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Rectangle()
-                .fill(Color(.systemGray5))
-                .frame(width: 120, height: 160)
-                .cornerRadius(8)
+            // Thumbnail
+            if let thumbnailUrlString = recentDoc.thumbnailUrl, let thumbnailUrl = URL(string: thumbnailUrlString) {
+                AsyncImage(url: thumbnailUrl) { phase in
+                    switch phase {
+                    case .empty:
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                            .frame(width: 120, height: 160)
+                            .cornerRadius(8)
+                            .overlay {
+                                ProgressView()
+                            }
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 120, height: 160)
+                            .clipped()
+                            .cornerRadius(8)
+                    case .failure:
+                        thumbnailPlaceholder
+                    @unknown default:
+                        thumbnailPlaceholder
+                    }
+                }
+            } else {
+                // No thumbnail URL available
+                thumbnailPlaceholder
+            }
             
-            Text("Document \(index + 1)")
+            Text(recentDoc.document.name)
                 .font(.caption)
                 .lineLimit(1)
-            Text("2 hours ago")
+            Text(formatTimeAgo(recentDoc.document.createdAt))
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
         .frame(width: 120)
+    }
+    
+    private var thumbnailPlaceholder: some View {
+        Rectangle()
+            .fill(Color(.systemGray5))
+            .frame(width: 120, height: 160)
+            .cornerRadius(8)
+            .overlay {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 32))
+                    .foregroundColor(.gray)
+            }
+    }
+    
+    private func formatTimeAgo(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
     
     // MARK: - Action Button
@@ -237,5 +317,6 @@ struct HomeView: View {
 #Preview {
     NavigationStack {
         HomeView()
+            .environmentObject(AuthenticationService())
     }
 }

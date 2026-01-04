@@ -274,6 +274,26 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         return []
     }
     
+    func fetchFirstPage(documentId: UUID) async throws -> DocumentPage? {
+        do {
+            let response: [DocumentPage] = try await client.database
+                .from("DocumentPage")
+                .select()
+                .eq("document_id", value: documentId.uuidString)
+                .eq("page_number", value: 1)
+                .limit(1)
+                .execute()
+                .value
+            
+            return response.first
+        } catch {
+            let error = DatabaseError.fetchFailed("Failed to fetch first page: \(error.localizedDescription)")
+            print("ERROR [fetchFirstPage]: \(error.localizedDescription)")
+            print("ERROR [fetchFirstPage]: Original error: \(error)")
+            throw error
+        }
+    }
+    
     func addPageToDocument(_ page: DocumentPage, image: UIImage) async throws {
         // TODO: Implement Supabase integration
         // 1. Upload image to Storage

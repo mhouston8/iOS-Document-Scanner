@@ -43,6 +43,10 @@ class DatabaseService {
         try await client.fetchDocumentPages(documentId: documentId)
     }
     
+    func fetchFirstPage(documentId: UUID) async throws -> DocumentPage? {
+        try await client.fetchFirstPage(documentId: documentId)
+    }
+    
     func addPageToDocument(_ page: DocumentPage, image: UIImage) async throws {
         try await client.addPageToDocument(page, image: image)
     }
