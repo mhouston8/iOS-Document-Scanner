@@ -168,10 +168,23 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
     }
     
     func fetchDocuments(userId: UUID) async throws -> [Document] {
-        // TODO: Implement Supabase query
-        // Fetch all documents for user
-        
-        return []
+        do {
+            let response: [Document] = try await client.database
+                .from("Document")
+                .select()
+                .eq("user_id", value: userId.uuidString)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+            
+            print("Fetched \(response.count) documents for user \(userId)")
+            return response
+        } catch {
+            let error = DatabaseError.fetchFailed("Failed to fetch documents: \(error.localizedDescription)")
+            print("ERROR [fetchDocuments]: \(error.localizedDescription)")
+            print("ERROR [fetchDocuments]: Original error: \(error)")
+            throw error
+        }
     }
     
     func fetchDocument(id: UUID) async throws -> Document? {
