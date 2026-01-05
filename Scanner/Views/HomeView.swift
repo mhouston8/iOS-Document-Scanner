@@ -78,26 +78,28 @@ private struct HomeViewContent: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header
-                headerSection
-                
-                // Category Tabs
-                categoryTabsSection
-                
-                // Actions for Selected Category (with "All" button as last card)
-                selectedCategoryActionsSection
-                
-                // Recent Documents
-                recentDocumentsSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    headerSection
+                    
+                    // Category Tabs
+                    categoryTabsSection
+                    
+                    // Actions for Selected Category (with "All" button as last card)
+                    selectedCategoryActionsSection
+                    
+                    // Recent Documents
+                    recentDocumentsSection
+                }
+                .padding()
             }
-            .padding()
-        }
-        .navigationTitle("Home")
-        .onAppear {
-            if viewModel.recentDocuments.isEmpty {
-                viewModel.loadRecentDocuments()
+            .navigationTitle("Home")
+            .onAppear {
+                if viewModel.recentDocuments.isEmpty {
+                    viewModel.loadRecentDocuments()
+                }
             }
         }
     }

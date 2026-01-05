@@ -268,10 +268,23 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
     // MARK: - Document Page Operations
     
     func fetchDocumentPages(documentId: UUID) async throws -> [DocumentPage] {
-        // TODO: Implement Supabase query
-        // Fetch all pages for a document
-        
-        return []
+        do {
+            let response: [DocumentPage] = try await client.database
+                .from("DocumentPage")
+                .select()
+                .eq("document_id", value: documentId.uuidString)
+                .order("page_number", ascending: true)
+                .execute()
+                .value
+            
+            print("Fetched \(response.count) pages for document \(documentId)")
+            return response
+        } catch {
+            let error = DatabaseError.fetchFailed("Failed to fetch document pages: \(error.localizedDescription)")
+            print("ERROR [fetchDocumentPages]: \(error.localizedDescription)")
+            print("ERROR [fetchDocumentPages]: Original error: \(error)")
+            throw error
+        }
     }
     
     func fetchFirstPage(documentId: UUID) async throws -> DocumentPage? {
