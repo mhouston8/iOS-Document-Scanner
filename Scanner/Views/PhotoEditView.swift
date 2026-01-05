@@ -13,13 +13,18 @@ struct PhotoEditView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentImage: UIImage
-    @State private var selectedTool: EditTool? = nil
+    @State private var showingToolView: EditTool? = nil
     
     enum EditTool: String, CaseIterable {
         case crop = "Crop"
         case rotate = "Rotate"
         case filters = "Filters"
         case adjust = "Adjust"
+        case removeBG = "Remove BG"
+        case sign = "Sign"
+        case watermark = "Watermark"
+        case annotate = "Annotate"
+        case redact = "Redact"
         case autoEnhance = "Auto"
         
         var icon: String {
@@ -28,6 +33,11 @@ struct PhotoEditView: View {
             case .rotate: return "rotate.right"
             case .filters: return "camera.filters"
             case .adjust: return "slider.horizontal.3"
+            case .removeBG: return "eye.slash"
+            case .sign: return "signature"
+            case .watermark: return "text.watermark"
+            case .annotate: return "text.bubble"
+            case .redact: return "eye.slash.fill"
             case .autoEnhance: return "sparkles"
             }
         }
@@ -54,6 +64,12 @@ struct PhotoEditView: View {
                 bottomToolbar
             }
         }
+        .fullScreenCover(item: Binding(
+            get: { showingToolView.map { ToolWrapper(tool: $0) } },
+            set: { showingToolView = $0?.tool }
+        )) { wrapper in
+            toolView(for: wrapper.tool)
+        }
     }
     
     // MARK: - Top Bar
@@ -79,6 +95,7 @@ struct PhotoEditView: View {
             }
             .foregroundColor(.blue)
             .fontWeight(.semibold)
+            .disabled(currentImage == image)
         }
         .padding()
         .background(Color.black.opacity(0.5))
@@ -99,228 +116,96 @@ struct PhotoEditView: View {
     // MARK: - Bottom Toolbar
     
     private var bottomToolbar: some View {
-        VStack(spacing: 0) {
-            // Tool Selection
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 20) {
-                    ForEach(EditTool.allCases, id: \.self) { tool in
-                        toolButton(tool: tool)
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                ForEach(EditTool.allCases, id: \.self) { tool in
+                    toolButton(tool: tool)
                 }
-                .padding(.horizontal, 20)
             }
-            .padding(.vertical, 16)
-            .background(Color.black.opacity(0.7))
-            
-            // Tool Options (when tool is selected)
-            if let selectedTool = selectedTool {
-                toolOptionsView(for: selectedTool)
-            }
+            .padding(.horizontal, 20)
         }
+        .padding(.vertical, 16)
+        .background(Color.black.opacity(0.7))
     }
     
     private func toolButton(tool: EditTool) -> some View {
         Button(action: {
-            withAnimation {
-                if selectedTool == tool {
-                    selectedTool = nil
-                } else {
-                    selectedTool = tool
-                }
+            if tool == .autoEnhance {
+                applyAutoEnhance()
+            } else {
+                showingToolView = tool
             }
         }) {
             VStack(spacing: 8) {
                 Image(systemName: tool.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(selectedTool == tool ? .blue : .white)
+                    .foregroundColor(.white)
                     .frame(width: 50, height: 50)
                     .background(
                         Circle()
-                            .fill(selectedTool == tool ? Color.blue.opacity(0.2) : Color.white.opacity(0.1))
+                            .fill(Color.white.opacity(0.1))
                     )
                 
                 Text(tool.rawValue)
                     .font(.caption)
-                    .foregroundColor(selectedTool == tool ? .blue : .white)
-            }
-        }
-    }
-    
-    private func toolOptionsView(for tool: EditTool) -> some View {
-        Group {
-            switch tool {
-            case .crop:
-                cropOptionsView
-            case .rotate:
-                rotateOptionsView
-            case .filters:
-                filterOptionsView
-            case .adjust:
-                adjustOptionsView
-            case .autoEnhance:
-                autoEnhanceOptionsView
-            }
-        }
-        .frame(height: 120)
-        .background(Color.black.opacity(0.8))
-    }
-    
-    // MARK: - Tool Options
-    
-    private var cropOptionsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                cropAspectButton("Free", ratio: nil)
-                cropAspectButton("1:1", ratio: 1.0)
-                cropAspectButton("4:3", ratio: 4.0/3.0)
-                cropAspectButton("16:9", ratio: 16.0/9.0)
-            }
-            .padding(.horizontal, 20)
-        }
-    }
-    
-    private func cropAspectButton(_ title: String, ratio: CGFloat?) -> some View {
-        Button(action: {
-            // TODO: Apply crop
-        }) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.3))
-                .cornerRadius(8)
-        }
-    }
-    
-    private var rotateOptionsView: some View {
-        HStack(spacing: 20) {
-            rotateButton(degrees: -90, icon: "rotate.left")
-            rotateButton(degrees: 90, icon: "rotate.right")
-            rotateButton(degrees: 180, icon: "arrow.2.circlepath")
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    private func rotateButton(degrees: CGFloat, icon: String) -> some View {
-        Button(action: {
-            // TODO: Rotate image
-            currentImage = rotateImage(currentImage, by: degrees)
-        }) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
-                Text("\(Int(degrees))°")
-                    .font(.caption)
-                    .foregroundColor(.white)
-            }
-            .frame(width: 80, height: 80)
-            .background(Color.blue.opacity(0.3))
-            .cornerRadius(12)
-        }
-    }
-    
-    private var filterOptionsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                filterButton("Original", filter: nil)
-                filterButton("B&W", filter: "bw")
-                filterButton("Vintage", filter: "vintage")
-                filterButton("Cool", filter: "cool")
-                filterButton("Warm", filter: "warm")
-            }
-            .padding(.horizontal, 20)
-        }
-    }
-    
-    private func filterButton(_ title: String, filter: String?) -> some View {
-        Button(action: {
-            // TODO: Apply filter
-        }) {
-            VStack(spacing: 8) {
-                // Preview thumbnail
-                Image(uiImage: currentImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .clipped()
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.blue, lineWidth: 2)
-                            .opacity(0)
-                    )
-                
-                Text(title)
-                    .font(.caption)
                     .foregroundColor(.white)
             }
         }
     }
     
-    private var adjustOptionsView: some View {
-        VStack(spacing: 12) {
-            adjustSlider(title: "Brightness", value: 0.5)
-            adjustSlider(title: "Contrast", value: 0.5)
-        }
-        .padding(.horizontal, 20)
-    }
+    // MARK: - Tool Views
     
-    private func adjustSlider(title: String, value: Double) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.white)
-            Slider(value: .constant(value), in: 0...1)
-                .tint(.blue)
-        }
-    }
-    
-    private var autoEnhanceOptionsView: some View {
-        Button(action: {
-            // TODO: Auto enhance
-        }) {
-            HStack {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 20))
-                Text("Auto Enhance")
-                    .font(.headline)
+    @ViewBuilder
+    private func toolView(for tool: EditTool) -> some View {
+        let binding = Binding<UIImage?>(
+            get: { currentImage },
+            set: { newImage in
+                if let newImage = newImage {
+                    currentImage = newImage
+                }
+                showingToolView = nil
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color.blue.opacity(0.3))
-            .cornerRadius(12)
+        )
+        
+        switch tool {
+        case .crop:
+            CropView(image: currentImage, editedImage: binding)
+        case .rotate:
+            RotateView(image: currentImage, editedImage: binding)
+        case .filters:
+            FiltersView(image: currentImage, editedImage: binding)
+        case .adjust:
+            AdjustView(image: currentImage, editedImage: binding)
+        case .removeBG:
+            RemoveBGView(image: currentImage, editedImage: binding)
+        case .sign:
+            SignView(image: currentImage, editedImage: binding)
+        case .watermark:
+            WatermarkView(image: currentImage, editedImage: binding)
+        case .annotate:
+            AnnotateView(image: currentImage, editedImage: binding)
+        case .redact:
+            RedactView(image: currentImage, editedImage: binding)
+        case .autoEnhance:
+            EmptyView()
         }
-        .padding(.horizontal, 20)
     }
     
-    // MARK: - Helper Functions
+    // MARK: - Actions
     
-    private func rotateImage(_ image: UIImage, by degrees: CGFloat) -> UIImage {
-        let radians = degrees * .pi / 180
-        let rotatedSize = CGRect(origin: .zero, size: image.size)
-            .applying(CGAffineTransform(rotationAngle: radians))
-            .integral.size
-        
-        UIGraphicsBeginImageContext(rotatedSize)
-        defer { UIGraphicsEndImageContext() }
-        
-        guard let context = UIGraphicsGetCurrentContext() else { return image }
-        context.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-        context.rotate(by: radians)
-        context.scaleBy(x: 1.0, y: -1.0)
-        
-        context.draw(image.cgImage!, in: CGRect(
-            x: -image.size.width / 2,
-            y: -image.size.height / 2,
-            width: image.size.width,
-            height: image.size.height
-        ))
-        
-        return UIGraphicsGetImageFromCurrentImageContext() ?? image
+    private func applyAutoEnhance() {
+        // TODO: Apply auto enhance
+        // For now, just update the image
+        withAnimation {
+            currentImage = image // Placeholder
+        }
     }
+}
+
+// Helper struct for fullScreenCover binding
+struct ToolWrapper: Identifiable {
+    let id = UUID()
+    let tool: PhotoEditView.EditTool
 }
 
 #Preview {
