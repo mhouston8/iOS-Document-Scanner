@@ -17,7 +17,6 @@ struct PhotoEditView: View {
     
     enum EditTool: String, CaseIterable {
         case crop = "Crop"
-        case rotate = "Rotate"
         case filters = "Filters"
         case adjust = "Adjust"
         case removeBG = "Remove BG"
@@ -30,7 +29,6 @@ struct PhotoEditView: View {
         var icon: String {
             switch self {
             case .crop: return "crop"
-            case .rotate: return "rotate.right"
             case .filters: return "camera.filters"
             case .adjust: return "slider.horizontal.3"
             case .removeBG: return "eye.slash"
@@ -120,12 +118,38 @@ struct PhotoEditView: View {
             HStack(spacing: 20) {
                 ForEach(EditTool.allCases, id: \.self) { tool in
                     toolButton(tool: tool)
+                    
+                    // Add rotate button after crop
+                    if tool == .crop {
+                        rotateButton
+                    }
                 }
             }
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 16)
         .background(Color.black.opacity(0.7))
+    }
+    
+    private var rotateButton: some View {
+        Button(action: {
+            rotateLeft()
+        }) {
+            VStack(spacing: 8) {
+                Image(systemName: "rotate.left")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .frame(width: 50, height: 50)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.1))
+                    )
+                
+                Text("Rotate")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+        }
     }
     
     private func toolButton(tool: EditTool) -> some View {
@@ -170,8 +194,6 @@ struct PhotoEditView: View {
         switch tool {
         case .crop:
             CropView(image: currentImage, editedImage: binding)
-        case .rotate:
-            RotateView(image: currentImage, editedImage: binding)
         case .filters:
             FiltersView(image: currentImage, editedImage: binding)
         case .adjust:
@@ -192,6 +214,36 @@ struct PhotoEditView: View {
     }
     
     // MARK: - Actions
+    
+    private func rotateLeft() {
+        withAnimation {
+            currentImage = rotateImage(currentImage, by: -90)
+        }
+    }
+    
+    private func rotateImage(_ image: UIImage, by degrees: CGFloat) -> UIImage {
+        let radians = degrees * .pi / 180
+        let rotatedSize = CGRect(origin: .zero, size: image.size)
+            .applying(CGAffineTransform(rotationAngle: radians))
+            .integral.size
+        
+        UIGraphicsBeginImageContextWithOptions(rotatedSize, false, 0.0)
+        defer { UIGraphicsEndImageContext() }
+        
+        guard let context = UIGraphicsGetCurrentContext() else { return image }
+        context.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
+        context.rotate(by: radians)
+        context.scaleBy(x: 1.0, y: -1.0)
+        
+        context.draw(image.cgImage!, in: CGRect(
+            x: -image.size.width / 2,
+            y: -image.size.height / 2,
+            width: image.size.width,
+            height: image.size.height
+        ))
+        
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
+    }
     
     private func applyAutoEnhance() {
         // TODO: Apply auto enhance
