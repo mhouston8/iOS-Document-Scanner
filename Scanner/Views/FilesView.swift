@@ -60,8 +60,8 @@ private struct FilesViewContent: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(viewModel.documents) { document in
-                        DocumentRowView(document: document)
+                    List(viewModel.documents) { documentWithThumbnail in
+                        DocumentRowView(documentWithThumbnail: documentWithThumbnail)
                     }
                 }
             }
@@ -79,10 +79,20 @@ private struct FilesViewContent: View {
 }
 
 private struct DocumentRowView: View {
-    let document: Document
+    let documentWithThumbnail: DocumentWithThumbnail
+    
+    private var document: Document {
+        documentWithThumbnail.document
+    }
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // Thumbnail
+            thumbnailView
+                .frame(width: 60, height: 80)
+                .cornerRadius(8)
+            
+            // Document Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.name)
                     .font(.headline)
@@ -93,13 +103,54 @@ private struct DocumentRowView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            
             Spacer()
+            
             if document.isFavorite {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    private var thumbnailView: some View {
+        Group {
+            if let thumbnailUrlString = documentWithThumbnail.thumbnailUrl, let thumbnailUrl = URL(string: thumbnailUrlString) {
+                AsyncImage(url: thumbnailUrl) { phase in
+                    switch phase {
+                    case .empty:
+                        thumbnailPlaceholder
+                            .overlay {
+                                ProgressView()
+                            }
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 60, height: 80)
+                            .clipped()
+                    case .failure:
+                        thumbnailPlaceholder
+                    @unknown default:
+                        thumbnailPlaceholder
+                    }
+                }
+            } else {
+                thumbnailPlaceholder
+            }
+        }
+    }
+    
+    private var thumbnailPlaceholder: some View {
+        Rectangle()
+            .fill(Color(.systemGray5))
+            .frame(width: 60, height: 80)
+            .overlay {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 24))
+                    .foregroundColor(.gray)
+            }
     }
     
     private func formatDate(_ date: Date) -> String {
