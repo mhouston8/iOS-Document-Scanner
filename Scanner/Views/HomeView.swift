@@ -19,6 +19,7 @@ private struct HomeViewContent: View {
     let authService: AuthenticationService
     @StateObject private var viewModel: HomeViewModel
     @State private var selectedCategory: Category = .scan
+    @State private var editingImage: UIImage? = nil
     
     enum Category: String, CaseIterable {
         case scan = "Scan"
@@ -100,6 +101,62 @@ private struct HomeViewContent: View {
                 if viewModel.recentDocuments.isEmpty {
                     viewModel.loadRecentDocuments()
                 }
+            }
+            .fullScreenCover(item: Binding(
+                get: { editingImage.map { ImageWrapper(image: $0) } },
+                set: { _ in editingImage = nil }
+            )) { wrapper in
+                PhotoEditView(images: [wrapper.image], editedImages: Binding(
+                    get: { editingImage.map { [$0] } },
+                    set: { newImages in
+                        editingImage = newImages?.first
+                    }
+                ))
+            }
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func loadImageAndShowEditor(from recentDoc: RecentDocument) {
+        print("DEBUG [HomeView]: Loading image for document \(recentDoc.document.id)")
+        
+        Task {
+            do {
+                let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+                
+                if let firstPage = try await databaseService.fetchFirstPage(documentId: recentDoc.document.id) {
+                    print("DEBUG [HomeView]: Got first page, imageUrl: \(firstPage.imageUrl)")
+                    
+                    if !firstPage.imageUrl.isEmpty, let imageUrl = URL(string: firstPage.imageUrl) {
+                        print("DEBUG [HomeView]: Loading image from URL: \(imageUrl)")
+                        
+                        // Load image from URL
+                        let (data, response) = try await URLSession.shared.data(from: imageUrl)
+                        print("DEBUG [HomeView]: Got data, size: \(data.count) bytes")
+                        
+                        if let httpResponse = response as? HTTPURLResponse {
+                            print("DEBUG [HomeView]: HTTP status: \(httpResponse.statusCode)")
+                        }
+                        
+                        if let image = UIImage(data: data) {
+                            print("DEBUG [HomeView]: Successfully created UIImage, size: \(image.size)")
+                            await MainActor.run {
+                                editingImage = image
+                                print("DEBUG [HomeView]: Set editingImage = image")
+                            }
+                        } else {
+                            print("ERROR [HomeView]: Failed to create UIImage from data")
+                        }
+                    } else {
+                        print("ERROR [HomeView]: Invalid image URL: \(firstPage.imageUrl)")
+                    }
+                } else {
+                    print("ERROR [HomeView]: No first page found")
+                }
+            } catch {
+                print("ERROR [HomeView]: Failed to load image: \(error)")
+                print("ERROR [HomeView]: Error details: \(error.localizedDescription)")
             }
         }
     }
@@ -203,6 +260,9 @@ private struct HomeViewContent: View {
                     HStack(spacing: 12) {
                         ForEach(viewModel.recentDocuments) { recentDoc in
                             recentDocumentCard(recentDoc: recentDoc)
+                                .onTapGesture {
+                                    loadImageAndShowEditor(from: recentDoc)
+                                }
                         }
                     }
                 }
@@ -314,6 +374,12 @@ private struct HomeViewContent: View {
         .background(Color(.systemGray6))
         .cornerRadius(10)
     }
+}
+
+// Helper struct for fullScreenCover item binding
+struct ImageWrapper: Identifiable {
+    let id = UUID()
+    let image: UIImage
 }
 
 #Preview {

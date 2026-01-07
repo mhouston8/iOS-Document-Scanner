@@ -8,12 +8,39 @@
 import SwiftUI
 
 struct PhotoEditView: View {
-    let image: UIImage
-    @Binding var editedImage: UIImage?
+    let images: [UIImage]  // Original images (for reset)
+    @Binding var editedImages: [UIImage]?  // Edited images array
+    
     @Environment(\.dismiss) private var dismiss
     
-    @State private var currentImage: UIImage
+    @State private var currentImages: [UIImage]  // Working copy of images
+    @State private var currentPageIndex: Int = 0
     @State private var showingToolView: EditTool? = nil
+    
+    // Convenience initializer for single image (backward compatibility)
+    init(image: UIImage, editedImage: Binding<UIImage?>) {
+        self.images = [image]
+        self._editedImages = Binding(
+            get: { editedImage.wrappedValue.map { [$0] } },
+            set: { editedImage.wrappedValue = $0?.first }
+        )
+        _currentImages = State(initialValue: [image])
+    }
+    
+    // Multi-page initializer
+    init(images: [UIImage], editedImages: Binding<[UIImage]?>) {
+        self.images = images
+        self._editedImages = editedImages
+        _currentImages = State(initialValue: images)
+    }
+    
+    // Computed property for current page image
+    private var currentImage: UIImage {
+        guard currentPageIndex < currentImages.count else {
+            return images.first ?? UIImage()
+        }
+        return currentImages[currentPageIndex]
+    }
     
     enum EditTool: String, CaseIterable {
         case crop = "Crop"
@@ -39,12 +66,6 @@ struct PhotoEditView: View {
             case .autoEnhance: return "sparkles"
             }
         }
-    }
-    
-    init(image: UIImage, editedImage: Binding<UIImage?>) {
-        self.image = image
-        self._editedImage = editedImage
-        _currentImage = State(initialValue: image)
     }
     
     var body: some View {
@@ -88,12 +109,12 @@ struct PhotoEditView: View {
             Spacer()
             
             Button("Done") {
-                editedImage = currentImage
+                editedImages = currentImages
                 dismiss()
             }
             .foregroundColor(.blue)
             .fontWeight(.semibold)
-            .disabled(currentImage == image)
+            .disabled(currentImages == images)
         }
         .padding()
         .background(Color.black.opacity(0.5))
@@ -103,11 +124,23 @@ struct PhotoEditView: View {
     
     private var imagePreview: some View {
         GeometryReader { geometry in
-            Image(uiImage: currentImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+            // Show error if no images
+            if images.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.white)
+                    Text("No images to edit")
+                        .foregroundColor(.white)
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.gray.opacity(0.2))
+            } else {
+                Image(uiImage: currentImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.gray.opacity(0.2))
+            }
         }
     }
     
@@ -184,8 +217,8 @@ struct PhotoEditView: View {
         let binding = Binding<UIImage?>(
             get: { currentImage },
             set: { newImage in
-                if let newImage = newImage {
-                    currentImage = newImage
+                if let newImage = newImage, currentPageIndex < currentImages.count {
+                    currentImages[currentPageIndex] = newImage
                 }
                 showingToolView = nil
             }
@@ -216,8 +249,10 @@ struct PhotoEditView: View {
     // MARK: - Actions
     
     private func rotateLeft() {
-        withAnimation {
-            currentImage = rotateImage(currentImage, by: -90)
+        //withAnimation {
+            if currentPageIndex < currentImages.count {
+                currentImages[currentPageIndex] = rotateImage(currentImages[currentPageIndex], by: -90)
+          //  }
         }
     }
     
@@ -246,10 +281,12 @@ struct PhotoEditView: View {
     }
     
     private func applyAutoEnhance() {
-        // TODO: Apply auto enhance
-        // For now, just update the image
+        // TODO: Apply auto enhance to current page
+        // For now, just update the current page
         withAnimation {
-            currentImage = image // Placeholder
+            if currentPageIndex < images.count && currentPageIndex < currentImages.count {
+                currentImages[currentPageIndex] = images[currentPageIndex] // Placeholder - reset to original
+            }
         }
     }
 }
