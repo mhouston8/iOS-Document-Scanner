@@ -10,14 +10,18 @@ import SwiftUI
 struct PhotoEditView: View {
     @Environment(\.dismiss) private var dismiss
     
+    @StateObject private var viewModel: PhotoEditViewModel
     @State private var showingToolView: EditTool? = nil
     
-    // Multi-page initializer
-    init(images: [UIImage], editedImages: Binding<[UIImage]?>) {
-        
+    init(document: Document) {
+        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+        _viewModel = StateObject(wrappedValue: PhotoEditViewModel(
+            document: document,
+            databaseService: databaseService
+        ))
     }
     
-    enum EditTool: String, CaseIterable {
+    enum EditTool: String, CaseIterable, Identifiable {
         case crop = "Crop"
         case filters = "Filters"
         case adjust = "Adjust"
@@ -27,6 +31,8 @@ struct PhotoEditView: View {
         case annotate = "Annotate"
         case redact = "Redact"
         case autoEnhance = "Auto"
+        
+        var id: String { rawValue }
         
         var icon: String {
             switch self {
@@ -47,15 +53,52 @@ struct PhotoEditView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Top Bar
-                topBar
-                
-                // Image Preview
-                imagePreview
-                
-                // Bottom Toolbar
-                bottomToolbar
+            if viewModel.isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            } else if viewModel.images.isEmpty {
+                VStack {
+                    Text("No images found")
+                        .foregroundColor(.white)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    // Top Bar
+                    topBar
+                    
+                    // Image Preview
+                    imagePreview
+                    
+                    // Bottom Toolbar
+                    bottomToolbar
+                }
+            }
+        }
+        .onAppear {
+            if viewModel.pages.isEmpty {
+                viewModel.loadPages()
+            }
+        }
+        .sheet(item: $showingToolView) { tool in
+            NavigationStack {
+                toolView(for: tool)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingToolView = nil
+                            }
+                        }
+                    }
+            }
+        }
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
             }
         }
     }
@@ -78,11 +121,14 @@ struct PhotoEditView: View {
             Spacer()
             
             Button("Done") {
+                if viewModel.hasUnsavedChanges {
+                    viewModel.saveChanges()
+                }
                 dismiss()
             }
-            .foregroundColor(.blue)
+            .foregroundColor(viewModel.hasUnsavedChanges ? .blue : .gray)
             .fontWeight(.semibold)
-            .disabled(true)
+            .disabled(!viewModel.hasUnsavedChanges || viewModel.isSaving)
         }
         .padding()
         .background(Color.black.opacity(0.5))
@@ -92,7 +138,26 @@ struct PhotoEditView: View {
     
     private var imagePreview: some View {
         GeometryReader { geometry in
-            
+            if let currentImage = viewModel.currentImage {
+                Image(uiImage: currentImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Color.black
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // Page indicator for multi-page documents
+            if viewModel.images.count > 1 {
+                Text("\(viewModel.currentPageIndex + 1) / \(viewModel.images.count)")
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(8)
+                    .padding()
+            }
         }
     }
     
@@ -118,7 +183,7 @@ struct PhotoEditView: View {
     
     private var rotateButton: some View {
         Button(action: {
-            rotateLeft()
+            viewModel.rotateCurrentImage(by: -90)
         }) {
             VStack(spacing: 8) {
                 Image(systemName: "rotate.left")
@@ -166,83 +231,54 @@ struct PhotoEditView: View {
     
     @ViewBuilder
     private func toolView(for tool: EditTool) -> some View {
-//        let binding = Binding<UIImage?>(
-//            get: { currentImage },
-//            set: { newImage in
-//                if let newImage = newImage, currentPageIndex < currentImages.count {
-//                    currentImages[currentPageIndex] = newImage
-//                }
-//                showingToolView = nil
-//            }
-//        )
-//        
-//        switch tool {
-//        case .crop:
-//            CropView(image: currentImage, editedImage: binding)
-//        case .filters:
-//            FiltersView(image: currentImage, editedImage: binding)
-//        case .adjust:
-//            AdjustView(image: currentImage, editedImage: binding)
-//        case .removeBG:
-//            RemoveBGView(image: currentImage, editedImage: binding)
-//        case .sign:
-//            SignView(image: currentImage, editedImage: binding)
-//        case .watermark:
-//            WatermarkView(image: currentImage, editedImage: binding)
-//        case .annotate:
-//            AnnotateView(image: currentImage, editedImage: binding)
-//        case .redact:
-//            RedactView(image: currentImage, editedImage: binding)
-//        case .autoEnhance:
-//            EmptyView()
-//        }
+        if let currentImage = viewModel.currentImage {
+            let binding = Binding<UIImage?>(
+                get: { viewModel.currentImage },
+                set: { newImage in
+                    if let newImage = newImage {
+                        viewModel.updateCurrentImage(newImage)
+                    }
+                    showingToolView = nil
+                }
+            )
+            
+            switch tool {
+            case .crop:
+                CropView(image: currentImage, editedImage: binding)
+            case .filters:
+                FiltersView(image: currentImage, editedImage: binding)
+            case .adjust:
+                AdjustView(image: currentImage, editedImage: binding)
+            case .removeBG:
+                RemoveBGView(image: currentImage, editedImage: binding)
+            case .sign:
+                SignView(image: currentImage, editedImage: binding)
+            case .watermark:
+                WatermarkView(image: currentImage, editedImage: binding)
+            case .annotate:
+                AnnotateView(image: currentImage, editedImage: binding)
+            case .redact:
+                RedactView(image: currentImage, editedImage: binding)
+            case .autoEnhance:
+                EmptyView()
+            }
+        } else {
+            EmptyView()
+        }
     }
     
     // MARK: - Actions
     
-    private func rotateLeft() {
-        //withAnimation {
-//            if currentPageIndex < currentImages.count {
-//                currentImages[currentPageIndex] = rotateImage(currentImages[currentPageIndex], by: -90)
-          //  }
-        //}
-    }
-    
-    private func rotateImage(_ image: UIImage, by degrees: CGFloat) -> UIImage {
-        let radians = degrees * .pi / 180
-        let rotatedSize = CGRect(origin: .zero, size: image.size)
-            .applying(CGAffineTransform(rotationAngle: radians))
-            .integral.size
-        
-        UIGraphicsBeginImageContextWithOptions(rotatedSize, false, 0.0)
-        defer { UIGraphicsEndImageContext() }
-        
-        guard let context = UIGraphicsGetCurrentContext() else { return image }
-        context.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-        context.rotate(by: radians)
-        context.scaleBy(x: 1.0, y: -1.0)
-        
-        context.draw(image.cgImage!, in: CGRect(
-            x: -image.size.width / 2,
-            y: -image.size.height / 2,
-            width: image.size.width,
-            height: image.size.height
-        ))
-        
-        return UIGraphicsGetImageFromCurrentImageContext() ?? image
-    }
-    
     private func applyAutoEnhance() {
-        
+        // TODO: Implement auto enhance
     }
-}
-
-// Helper struct for fullScreenCover binding
-struct ToolWrapper: Identifiable {
-    let id = UUID()
-    let tool: PhotoEditView.EditTool
 }
 
 #Preview {
-    PhotoEditView(images: [UIImage(systemName: "photo")!], editedImages: .constant(nil))
+    let document = Document(
+        userId: UUID(),
+        name: "Preview Document",
+        pageCount: 1
+    )
+    return PhotoEditView(document: document)
 }
