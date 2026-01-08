@@ -35,7 +35,7 @@ struct PhotoEditView: View {
             case .adjust: return "slider.horizontal.3"
             case .removeBG: return "eye.slash"
             case .sign: return "signature"
-            case .watermark: return "text.watermark"
+            case .watermark: return "textformat"
             case .annotate: return "text.bubble"
             case .redact: return "eye.slash.fill"
             case .autoEnhance: return "sparkles"
