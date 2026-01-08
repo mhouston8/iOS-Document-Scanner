@@ -55,7 +55,7 @@ struct HomeViewOptionB: View {
                     title: "Sign & Mark",
                     actions: [
                         ActionItem(icon: "signature", title: "Sign", color: .blue),
-                        ActionItem(icon: "text.watermark", title: "Watermark", color: .cyan),
+                        ActionItem(icon: "textformat", title: "Watermark", color: .cyan),
                         ActionItem(icon: "text.bubble", title: "Annotate", color: .orange),
                         ActionItem(icon: "eye.slash.fill", title: "Redact", color: .black)
                     ]
