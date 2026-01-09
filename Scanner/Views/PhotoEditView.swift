@@ -138,16 +138,22 @@ struct PhotoEditView: View {
     
     private var imagePreview: some View {
         ZStack {
-            if let currentImage = viewModel.currentImage {
-                Image(uiImage: currentImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
+            if viewModel.editedImages.isEmpty {
                 Color.black
+            } else {
+                TabView(selection: $viewModel.currentPageIndex) {
+                    ForEach(0..<viewModel.editedImages.count, id: \.self) { index in
+                        Image(uiImage: viewModel.editedImages[index])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
             
-            // Page indicator for multi-page documents
+            // Custom page indicator for multi-page documents
             if viewModel.images.count > 1 {
                 VStack {
                     HStack {
