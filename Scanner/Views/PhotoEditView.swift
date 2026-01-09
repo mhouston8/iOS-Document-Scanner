@@ -137,7 +137,7 @@ struct PhotoEditView: View {
     // MARK: - Image Preview
     
     private var imagePreview: some View {
-        GeometryReader { geometry in
+        ZStack {
             if let currentImage = viewModel.currentImage {
                 Image(uiImage: currentImage)
                     .resizable()
@@ -146,17 +146,22 @@ struct PhotoEditView: View {
             } else {
                 Color.black
             }
-        }
-        .overlay(alignment: .topTrailing) {
+            
             // Page indicator for multi-page documents
             if viewModel.images.count > 1 {
-                Text("\(viewModel.currentPageIndex + 1) / \(viewModel.images.count)")
-                    .font(.caption)
-                    .foregroundColor(.white)
-                    .padding(8)
-                    .background(Color.black.opacity(0.6))
-                    .cornerRadius(8)
-                    .padding()
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("\(viewModel.currentPageIndex + 1) / \(viewModel.images.count)")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(8)
+                            .padding()
+                    }
+                    Spacer()
+                }
             }
         }
     }
