@@ -102,10 +102,7 @@ private struct HomeViewContent: View {
                     viewModel.loadRecentDocuments()
                 }
             }
-            .fullScreenCover(item: Binding(
-                get: { editingDocument },
-                set: { _ in editingDocument = nil }
-            )) { document in
+            .fullScreenCover(item: $editingDocument) { document in
                 PhotoEditView(document: document)
             }
         }
