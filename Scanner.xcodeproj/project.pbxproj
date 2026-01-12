@@ -11,6 +11,7 @@
 		3D9261DA2F07278D00F963AD /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9261D92F07278D00F963AD /* PostgREST */; };
 		3D9261DC2F07278D00F963AD /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9261DB2F07278D00F963AD /* Storage */; };
 		3D9261DE2F07278D00F963AD /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9261DD2F07278D00F963AD /* Supabase */; };
+		3DA38FE82F1564340063D6CC /* Mantis in Frameworks */ = {isa = PBXBuildFile; productRef = 3DA38FE72F1564340063D6CC /* Mantis */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DA38FE82F1564340063D6CC /* Mantis in Frameworks */,
 				3D9261DE2F07278D00F963AD /* Supabase in Frameworks */,
 				3D9261DC2F07278D00F963AD /* Storage in Frameworks */,
 				3D9261DA2F07278D00F963AD /* PostgREST in Frameworks */,
@@ -82,6 +84,7 @@
 				3D9261D92F07278D00F963AD /* PostgREST */,
 				3D9261DB2F07278D00F963AD /* Storage */,
 				3D9261DD2F07278D00F963AD /* Supabase */,
+				3DA38FE72F1564340063D6CC /* Mantis */,
 			);
 			productName = Scanner;
 			productReference = 3D92612C2F01F54200F963AD /* Scanner.app */;
@@ -113,6 +116,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3D9261D62F07278D00F963AD /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				3DA38FE62F1564340063D6CC /* XCRemoteSwiftPackageReference "Mantis" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D92612D2F01F54200F963AD /* Products */;
@@ -364,6 +368,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		3DA38FE62F1564340063D6CC /* XCRemoteSwiftPackageReference "Mantis" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/guoyingtao/Mantis";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -386,6 +398,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3D9261D62F07278D00F963AD /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		3DA38FE72F1564340063D6CC /* Mantis */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3DA38FE62F1564340063D6CC /* XCRemoteSwiftPackageReference "Mantis" */;
+			productName = Mantis;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

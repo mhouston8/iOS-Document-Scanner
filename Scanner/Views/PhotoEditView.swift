@@ -79,7 +79,10 @@ struct PhotoEditView: View {
                 viewModel.loadPages()
             }
         }
-        .sheet(item: $showingToolView) { tool in
+        .sheet(item: Binding(
+            get: { showingToolView != .crop ? showingToolView : nil },
+            set: { showingToolView = $0 }
+        )) { tool in
             NavigationStack {
                 toolView(for: tool)
                     .navigationBarTitleDisplayMode(.inline)
@@ -90,6 +93,23 @@ struct PhotoEditView: View {
                             }
                         }
                     }
+            }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { showingToolView == .crop },
+            set: { if !$0 { showingToolView = nil } }
+        )) {
+            if let currentImage = viewModel.currentImage {
+                let binding = Binding<UIImage?>(
+                    get: { viewModel.currentImage },
+                    set: { newImage in
+                        if let newImage = newImage {
+                            viewModel.updateCurrentImage(newImage)
+                        }
+                        showingToolView = nil
+                    }
+                )
+                CropView(image: currentImage, editedImage: binding)
             }
         }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
