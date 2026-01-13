@@ -51,6 +51,18 @@ class DatabaseService {
         try await client.addPageToDocument(page, image: image)
     }
     
+    func uploadDocumentPage(_ page: DocumentPage, image: UIImage) async throws -> String {
+        try await client.uploadDocumentPage(page, image: image)
+    }
+    
+    func updateDocumentPage(_ page: DocumentPage) async throws {
+        try await client.updateDocumentPage(page)
+    }
+    
+    func updateDocumentPages(_ pages: [DocumentPage]) async throws {
+        try await client.updateDocumentPages(pages)
+    }
+    
     func deletePage(_ page: DocumentPage) async throws {
         try await client.deletePage(page)
     }

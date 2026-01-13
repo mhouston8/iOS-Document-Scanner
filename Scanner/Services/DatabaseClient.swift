@@ -22,6 +22,9 @@ protocol DatabaseClientProtocol {
     func fetchDocumentPages(documentId: UUID) async throws -> [DocumentPage]
     func fetchFirstPage(documentId: UUID) async throws -> DocumentPage?
     func addPageToDocument(_ page: DocumentPage, image: UIImage) async throws
+    func uploadDocumentPage(_ page: DocumentPage, image: UIImage) async throws -> String
+    func updateDocumentPage(_ page: DocumentPage) async throws
+    func updateDocumentPages(_ pages: [DocumentPage]) async throws
     func deletePage(_ page: DocumentPage) async throws
     
     // MARK: - Storage Operations

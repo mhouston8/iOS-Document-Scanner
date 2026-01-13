@@ -146,20 +146,54 @@ class PhotoEditViewModel: ObservableObject {
             errorMessage = nil
             
             do {
-                // Update each page's image
-                for (index, image) in editedImages.enumerated() {
+                // Only save pages that have been edited (compare editedImages with original images)
+                var pagesToUpdate: [(page: DocumentPage, image: UIImage)] = []
+                
+                for (index, editedImage) in editedImages.enumerated() {
                     guard index < pages.count else { continue }
-                    let page = pages[index]
+                    guard index < images.count else { continue }
                     
-                    // Upload the edited image
-                    let path = "documents/\(document.id.uuidString)/page_\(page.pageNumber).jpg"
-                    let imageUrl = try await databaseService.uploadImage(image, to: "images", path: path)
+                    // Check if image was actually modified
+                    let originalImage = images[index]
+                    if !imagesAreEqual(originalImage, editedImage) {
+                        pagesToUpdate.append((page: pages[index], image: editedImage))
+                    }
+                }
+                
+                // If no changes, just return
+                guard !pagesToUpdate.isEmpty else {
+                    hasUnsavedChanges = false
+                    isSaving = false
+                    return
+                }
+                
+                // Upload edited images and prepare updated pages
+                var updatedPages: [DocumentPage] = []
+                
+                for (page, editedImage) in pagesToUpdate {
+                    // Upload the edited image (overwrites existing)
+                    let imageUrl = try await databaseService.uploadDocumentPage(page, image: editedImage)
                     
                     // Update the page record with new image URL
                     var updatedPage = page
                     updatedPage.imageUrl = imageUrl
-                    // Note: We'd need an updatePage method in DatabaseService for this
-                    // For now, we'll just upload the images
+                    
+                    // Optionally regenerate thumbnail (for now, we'll skip this)
+                    // TODO: Regenerate thumbnail from cropped image if needed
+                    
+                    updatedPages.append(updatedPage)
+                }
+                
+                // Batch update all pages in database
+                if !updatedPages.isEmpty {
+                    try await databaseService.updateDocumentPages(updatedPages)
+                    
+                    // Update local pages array
+                    for updatedPage in updatedPages {
+                        if let index = pages.firstIndex(where: { $0.id == updatedPage.id }) {
+                            pages[index] = updatedPage
+                        }
+                    }
                 }
                 
                 // Update document's updatedAt timestamp
@@ -167,8 +201,11 @@ class PhotoEditViewModel: ObservableObject {
                 updatedDocument.updatedAt = Date()
                 try await databaseService.updateDocument(updatedDocument)
                 
+                // Update original images array to match edited images
+                images = editedImages
                 hasUnsavedChanges = false
-                print("Successfully saved changes for document \(document.id)")
+                
+                print("Successfully saved changes for document \(document.id) - updated \(pagesToUpdate.count) page(s)")
             } catch {
                 errorMessage = "Failed to save changes: \(error.localizedDescription)"
                 print("ERROR [PhotoEditViewModel]: Failed to save changes: \(error.localizedDescription)")
@@ -177,4 +214,16 @@ class PhotoEditViewModel: ObservableObject {
             isSaving = false
         }
     }
+    
+    // MARK: - Helper Methods
+    
+    private func imagesAreEqual(_ image1: UIImage, _ image2: UIImage) -> Bool {
+        // Simple comparison - if data is the same, images are the same
+        guard let data1 = image1.jpegData(compressionQuality: 1.0),
+              let data2 = image2.jpegData(compressionQuality: 1.0) else {
+            return false
+        }
+        return data1 == data2
+    }
+    
 }

@@ -316,6 +316,83 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         print("Adding page to document: \(page.documentId)")
     }
     
+    func uploadDocumentPage(_ page: DocumentPage, image: UIImage) async throws -> String {
+        let uid = try await client.auth.session.user.id.uuidString.lowercased()
+        let documentPath = "\(uid)/\(page.documentId.uuidString)/page_\(page.pageNumber).jpg"
+        
+        // Convert UIImage to Data
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            let error = StorageError.conversionFailed("Failed to convert image to JPEG data")
+            print("ERROR [uploadDocumentPage]: \(error.localizedDescription)")
+            throw error
+        }
+        
+        do {
+            // Upload image to Storage (overwrites existing if path is the same)
+            try await client.storage
+                .from(SupabaseConfig.documentsBucket)
+                .upload(documentPath, data: imageData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+            
+            // Get public URL
+            let url = try client.storage
+                .from(SupabaseConfig.documentsBucket)
+                .getPublicURL(path: documentPath)
+            
+            print("Uploaded DocumentPage image: \(documentPath)")
+            return url.absoluteString
+        } catch {
+            let error = StorageError.uploadFailed("Failed to upload DocumentPage image: \(error.localizedDescription)")
+            print("ERROR [uploadDocumentPage]: \(error.localizedDescription)")
+            print("ERROR [uploadDocumentPage]: Original error: \(error)")
+            throw error
+        }
+    }
+    
+    func updateDocumentPage(_ page: DocumentPage) async throws {
+        do {
+            try await client.database
+                .from("DocumentPage")
+                .update(page)
+                .eq("id", value: page.id.uuidString)
+                .execute()
+            
+            print("Updated DocumentPage: \(page.id) for document \(page.documentId)")
+        } catch {
+            let error = DatabaseError.updateFailed("Failed to update DocumentPage: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPage]: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPage]: Original error: \(error)")
+            throw error
+        }
+    }
+    
+    func updateDocumentPages(_ pages: [DocumentPage]) async throws {
+        do {
+            // Update each page individually (Supabase doesn't have native batch update)
+            // But we can do them in parallel for better performance
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for page in pages {
+                    group.addTask {
+                        try await self.client.database
+                            .from("DocumentPage")
+                            .update(page)
+                            .eq("id", value: page.id.uuidString)
+                            .execute()
+                    }
+                }
+                
+                // Wait for all updates to complete
+                try await group.waitForAll()
+            }
+            
+            print("Updated \(pages.count) DocumentPage(s)")
+        } catch {
+            let error = DatabaseError.updateFailed("Failed to update DocumentPages: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPages]: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPages]: Original error: \(error)")
+            throw error
+        }
+    }
+    
     func deletePage(_ page: DocumentPage) async throws {
         // TODO: Implement Supabase delete
         // 1. Delete file from Storage

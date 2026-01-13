@@ -81,7 +81,7 @@ struct PhotoEditView: View {
         }
         .sheet(item: Binding(
             get: { showingToolView != .crop ? showingToolView : nil },
-            set: { showingToolView = $0 }
+            set: { newTool in showingToolView = newTool }
         )) { tool in
             NavigationStack {
                 toolView(for: tool)
@@ -97,7 +97,11 @@ struct PhotoEditView: View {
         }
         .fullScreenCover(isPresented: Binding(
             get: { showingToolView == .crop },
-            set: { if !$0 { showingToolView = nil } }
+            set: { isPresented in
+                if !isPresented {
+                    showingToolView = nil
+                }
+            }
         )) {
             if let currentImage = viewModel.currentImage {
                 let binding = Binding<UIImage?>(
