@@ -45,8 +45,8 @@ struct SettingsView: View {
         Task {
             do {
                 let client = SupabaseDatabaseClient()
-                // Simple test - try to fetch documents (will fail if connection is bad)
-                _ = try await client.fetchDocuments(userId: UUID())
+                // Simple test - try to read documents (will fail if connection is bad)
+                _ = try await client.readDocuments(userId: UUID())
                 
                 await MainActor.run {
                     connectionStatus = "Connected ✓"

@@ -21,103 +21,29 @@ class DatabaseService {
         try await client.saveDocument(document, pages: pages)
     }
     
-    func fetchDocuments(userId: UUID) async throws -> [Document] {
-        try await client.fetchDocuments(userId: userId)
+    func readDocuments(userId: UUID) async throws -> [Document] {
+        try await client.readDocuments(userId: userId)
     }
     
-    func fetchDocument(id: UUID) async throws -> Document? {
-        try await client.fetchDocument(id: id)
-    }
-    
-    func updateDocument(_ document: Document) async throws {
-        try await client.updateDocument(document)
-    }
-    
-    func deleteDocument(_ document: Document) async throws {
-        try await client.deleteDocument(document)
+    func updateDocumentInDatabase(_ document: Document) async throws {
+        try await client.updateDocumentInDatabase(document)
     }
     
     // MARK: - Document Page Operations
     
-    func fetchDocumentPages(documentId: UUID) async throws -> [DocumentPage] {
-        try await client.fetchDocumentPages(documentId: documentId)
+    func readDocumentPagesFromDatabase(documentId: UUID) async throws -> [DocumentPage] {
+        try await client.readDocumentPagesFromDatabase(documentId: documentId)
     }
     
-    func fetchFirstPage(documentId: UUID) async throws -> DocumentPage? {
-        try await client.fetchFirstPage(documentId: documentId)
+    func readFirstPageFromDatabase(documentId: UUID) async throws -> DocumentPage? {
+        try await client.readFirstPageFromDatabase(documentId: documentId)
     }
     
-    func addPageToDocument(_ page: DocumentPage, image: UIImage) async throws {
-        try await client.addPageToDocument(page, image: image)
+    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> String {
+        try await client.uploadDocumentPageToStorage(page, image: image)
     }
     
-    func uploadDocumentPage(_ page: DocumentPage, image: UIImage) async throws -> String {
-        try await client.uploadDocumentPage(page, image: image)
-    }
-    
-    func updateDocumentPage(_ page: DocumentPage) async throws {
-        try await client.updateDocumentPage(page)
-    }
-    
-    func updateDocumentPages(_ pages: [DocumentPage]) async throws {
-        try await client.updateDocumentPages(pages)
-    }
-    
-    func deletePage(_ page: DocumentPage) async throws {
-        try await client.deletePage(page)
-    }
-    
-    // MARK: - Storage Operations
-    
-    func uploadImage(_ image: UIImage, to bucket: String, path: String) async throws -> String {
-        try await client.uploadImage(image, to: bucket, path: path)
-    }
-    
-    func deleteImage(from bucket: String, path: String) async throws {
-        try await client.deleteImage(from: bucket, path: path)
-    }
-    
-    // MARK: - Folder Operations
-    
-    func fetchFolders(userId: UUID) async throws -> [Folder] {
-        try await client.fetchFolders(userId: userId)
-    }
-    
-    func createFolder(_ folder: Folder) async throws {
-        try await client.createFolder(folder)
-    }
-    
-    func updateFolder(_ folder: Folder) async throws {
-        try await client.updateFolder(folder)
-    }
-    
-    func deleteFolder(_ folder: Folder) async throws {
-        try await client.deleteFolder(folder)
-    }
-    
-    // MARK: - Tag Operations
-    
-    func fetchTags(userId: UUID) async throws -> [Tag] {
-        try await client.fetchTags(userId: userId)
-    }
-    
-    func createTag(_ tag: Tag) async throws {
-        try await client.createTag(tag)
-    }
-    
-    func updateTag(_ tag: Tag) async throws {
-        try await client.updateTag(tag)
-    }
-    
-    func deleteTag(_ tag: Tag) async throws {
-        try await client.deleteTag(tag)
-    }
-    
-    func addTagToDocument(documentId: UUID, tagId: UUID) async throws {
-        try await client.addTagToDocument(documentId: documentId, tagId: tagId)
-    }
-    
-    func removeTagFromDocument(documentId: UUID, tagId: UUID) async throws {
-        try await client.removeTagFromDocument(documentId: documentId, tagId: tagId)
+    func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws {
+        try await client.updateDocumentPagesInDatabase(pages)
     }
 }

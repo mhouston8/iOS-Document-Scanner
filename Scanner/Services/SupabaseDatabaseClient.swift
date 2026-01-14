@@ -222,7 +222,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
-    func fetchDocuments(userId: UUID) async throws -> [Document] {
+    func readDocuments(userId: UUID) async throws -> [Document] {
         do {
             let response: [Document] = try await client.database
                 .from("Document")
@@ -235,39 +235,23 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             print("Fetched \(response.count) documents for user \(userId)")
             return response
         } catch {
-            let error = DatabaseError.fetchFailed("Failed to fetch documents: \(error.localizedDescription)")
-            print("ERROR [fetchDocuments]: \(error.localizedDescription)")
-            print("ERROR [fetchDocuments]: Original error: \(error)")
+            let error = DatabaseError.fetchFailed("Failed to read documents: \(error.localizedDescription)")
+            print("ERROR [readDocuments]: \(error.localizedDescription)")
+            print("ERROR [readDocuments]: Original error: \(error)")
             throw error
         }
     }
     
-    func fetchDocument(id: UUID) async throws -> Document? {
-        // TODO: Implement Supabase query
-        // Fetch single document by ID
-        
-        return nil
-    }
-    
-    func updateDocument(_ document: Document) async throws {
+    func updateDocumentInDatabase(_ document: Document) async throws {
         // TODO: Implement Supabase update
         // Update document metadata
         
         print("Updating document: \(document.id)")
     }
     
-    func deleteDocument(_ document: Document) async throws {
-        // TODO: Implement Supabase delete
-        // 1. Delete DocumentPage records
-        // 2. Delete files from Storage
-        // 3. Delete Document record
-        
-        print("Deleting document: \(document.id)")
-    }
-    
     // MARK: - Document Page Operations
     
-    func fetchDocumentPages(documentId: UUID) async throws -> [DocumentPage] {
+    func readDocumentPagesFromDatabase(documentId: UUID) async throws -> [DocumentPage] {
         do {
             let response: [DocumentPage] = try await client.database
                 .from("DocumentPage")
@@ -280,14 +264,14 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             print("Fetched \(response.count) pages for document \(documentId)")
             return response
         } catch {
-            let error = DatabaseError.fetchFailed("Failed to fetch document pages: \(error.localizedDescription)")
-            print("ERROR [fetchDocumentPages]: \(error.localizedDescription)")
-            print("ERROR [fetchDocumentPages]: Original error: \(error)")
+            let error = DatabaseError.fetchFailed("Failed to read document pages: \(error.localizedDescription)")
+            print("ERROR [readDocumentPagesFromDatabase]: \(error.localizedDescription)")
+            print("ERROR [readDocumentPagesFromDatabase]: Original error: \(error)")
             throw error
         }
     }
     
-    func fetchFirstPage(documentId: UUID) async throws -> DocumentPage? {
+    func readFirstPageFromDatabase(documentId: UUID) async throws -> DocumentPage? {
         do {
             let response: [DocumentPage] = try await client.database
                 .from("DocumentPage")
@@ -300,23 +284,14 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             
             return response.first
         } catch {
-            let error = DatabaseError.fetchFailed("Failed to fetch first page: \(error.localizedDescription)")
-            print("ERROR [fetchFirstPage]: \(error.localizedDescription)")
-            print("ERROR [fetchFirstPage]: Original error: \(error)")
+            let error = DatabaseError.fetchFailed("Failed to read first page: \(error.localizedDescription)")
+            print("ERROR [readFirstPageFromDatabase]: \(error.localizedDescription)")
+            print("ERROR [readFirstPageFromDatabase]: Original error: \(error)")
             throw error
         }
     }
     
-    func addPageToDocument(_ page: DocumentPage, image: UIImage) async throws {
-        // TODO: Implement Supabase integration
-        // 1. Upload image to Storage
-        // 2. Create DocumentPage record
-        //    Note: user_id is automatically set to auth.uid() via database DEFAULT
-        
-        print("Adding page to document: \(page.documentId)")
-    }
-    
-    func uploadDocumentPage(_ page: DocumentPage, image: UIImage) async throws -> String {
+    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> String {
         let uid = try await client.auth.session.user.id.uuidString.lowercased()
         let documentPath = "\(uid)/\(page.documentId.uuidString)/page_\(page.pageNumber).jpg"
         
@@ -348,24 +323,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
-    func updateDocumentPage(_ page: DocumentPage) async throws {
-        do {
-            try await client.database
-                .from("DocumentPage")
-                .update(page)
-                .eq("id", value: page.id.uuidString)
-                .execute()
-            
-            print("Updated DocumentPage: \(page.id) for document \(page.documentId)")
-        } catch {
-            let error = DatabaseError.updateFailed("Failed to update DocumentPage: \(error.localizedDescription)")
-            print("ERROR [updateDocumentPage]: \(error.localizedDescription)")
-            print("ERROR [updateDocumentPage]: Original error: \(error)")
-            throw error
-        }
-    }
-    
-    func updateDocumentPages(_ pages: [DocumentPage]) async throws {
+    func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws {
         do {
             // Update each page individually (Supabase doesn't have native batch update)
             // But we can do them in parallel for better performance
@@ -393,81 +351,4 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
-    func deletePage(_ page: DocumentPage) async throws {
-        // TODO: Implement Supabase delete
-        // 1. Delete file from Storage
-        // 2. Delete DocumentPage record
-        
-        print("Deleting page: \(page.id)")
-    }
-    
-    // MARK: - Storage Operations
-    
-    func uploadImage(_ image: UIImage, to bucket: String, path: String) async throws -> String {
-        // TODO: Implement Supabase Storage upload
-        // Upload image and return URL
-        
-        return ""
-    }
-    
-    func deleteImage(from bucket: String, path: String) async throws {
-        // TODO: Implement Supabase Storage delete
-        
-    }
-    
-    // MARK: - Folder Operations
-    
-    func fetchFolders(userId: UUID) async throws -> [Folder] {
-        // TODO: Implement Supabase query
-        
-        return []
-    }
-    
-    func createFolder(_ folder: Folder) async throws {
-        // TODO: Implement Supabase insert
-        
-    }
-    
-    func updateFolder(_ folder: Folder) async throws {
-        // TODO: Implement Supabase update
-        
-    }
-    
-    func deleteFolder(_ folder: Folder) async throws {
-        // TODO: Implement Supabase delete
-        
-    }
-    
-    // MARK: - Tag Operations
-    
-    func fetchTags(userId: UUID) async throws -> [Tag] {
-        // TODO: Implement Supabase query
-        
-        return []
-    }
-    
-    func createTag(_ tag: Tag) async throws {
-        // TODO: Implement Supabase insert
-        
-    }
-    
-    func updateTag(_ tag: Tag) async throws {
-        // TODO: Implement Supabase update
-        
-    }
-    
-    func deleteTag(_ tag: Tag) async throws {
-        // TODO: Implement Supabase delete
-        
-    }
-    
-    func addTagToDocument(documentId: UUID, tagId: UUID) async throws {
-        // TODO: Implement Supabase insert into DocumentTag junction table
-        
-    }
-    
-    func removeTagFromDocument(documentId: UUID, tagId: UUID) async throws {
-        // TODO: Implement Supabase delete from DocumentTag junction table
-        
-    }
 }

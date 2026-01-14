@@ -50,15 +50,15 @@ class FilesViewModel: ObservableObject {
                     return
                 }
                 
-                // Fetch all documents
-                let fetchedDocuments = try await databaseService.fetchDocuments(userId: userId)
+                // Read all documents
+                let fetchedDocuments = try await databaseService.readDocuments(userId: userId)
                 
-                // Fetch first page (thumbnail) for each document
+                // Read first page (thumbnail) for each document
                 var documentsWithThumbnails: [DocumentWithThumbnail] = []
                 
                 for document in fetchedDocuments {
                     do {
-                        let firstPage = try await databaseService.fetchFirstPage(documentId: document.id)
+                        let firstPage = try await databaseService.readFirstPageFromDatabase(documentId: document.id)
                         let docWithThumbnail = DocumentWithThumbnail(
                             document: document,
                             thumbnailUrl: firstPage?.thumbnailUrl

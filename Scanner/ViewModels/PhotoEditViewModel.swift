@@ -37,8 +37,8 @@ class PhotoEditViewModel: ObservableObject {
             errorMessage = nil
             
             do {
-                // Fetch all pages for the document
-                let fetchedPages = try await databaseService.fetchDocumentPages(documentId: document.id)
+                // Read all pages for the document
+                let fetchedPages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
                 pages = fetchedPages.sorted { $0.pageNumber < $1.pageNumber }
                 
                 // Load images from URLs
@@ -172,7 +172,7 @@ class PhotoEditViewModel: ObservableObject {
                 
                 for (page, editedImage) in pagesToUpdate {
                     // Upload the edited image (overwrites existing)
-                    let imageUrl = try await databaseService.uploadDocumentPage(page, image: editedImage)
+                    let imageUrl = try await databaseService.uploadDocumentPageToStorage(page, image: editedImage)
                     
                     // Update the page record with new image URL
                     var updatedPage = page
@@ -186,7 +186,7 @@ class PhotoEditViewModel: ObservableObject {
                 
                 // Batch update all pages in database
                 if !updatedPages.isEmpty {
-                    try await databaseService.updateDocumentPages(updatedPages)
+                    try await databaseService.updateDocumentPagesInDatabase(updatedPages)
                     
                     // Update local pages array
                     for updatedPage in updatedPages {
@@ -199,7 +199,7 @@ class PhotoEditViewModel: ObservableObject {
                 // Update document's updatedAt timestamp
                 var updatedDocument = document
                 updatedDocument.updatedAt = Date()
-                try await databaseService.updateDocument(updatedDocument)
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
                 
                 // Update original images array to match edited images
                 images = editedImages

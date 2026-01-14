@@ -51,8 +51,8 @@ class HomeViewModel: ObservableObject {
                     return
                 }
                 
-                // Fetch all documents (sorted by created_at DESC)
-                let allDocuments = try await databaseService.fetchDocuments(userId: userId)
+                // Read all documents (sorted by created_at DESC)
+                let allDocuments = try await databaseService.readDocuments(userId: userId)
                 documentCount = allDocuments.count
                 
                 // Get the most recent documents (up to limit)
@@ -63,7 +63,7 @@ class HomeViewModel: ObservableObject {
                 
                 for document in recentDocs {
                     do {
-                        let firstPage = try await databaseService.fetchFirstPage(documentId: document.id)
+                        let firstPage = try await databaseService.readFirstPageFromDatabase(documentId: document.id)
                         let recentDoc = RecentDocument(
                             document: document,
                             thumbnailUrl: firstPage?.thumbnailUrl
