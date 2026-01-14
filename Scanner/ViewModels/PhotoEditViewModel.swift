@@ -171,15 +171,13 @@ class PhotoEditViewModel: ObservableObject {
                 var updatedPages: [DocumentPage] = []
                 
                 for (page, editedImage) in pagesToUpdate {
-                    // Upload the edited image (overwrites existing)
-                    let imageUrl = try await databaseService.uploadDocumentPageToStorage(page, image: editedImage)
+                    // Upload the edited image and thumbnail (overwrites existing)
+                    let urls = try await databaseService.uploadDocumentPageToStorage(page, image: editedImage)
                     
-                    // Update the page record with new image URL
+                    // Update the page record with new image URL and thumbnail URL
                     var updatedPage = page
-                    updatedPage.imageUrl = imageUrl
-                    
-                    // Optionally regenerate thumbnail (for now, we'll skip this)
-                    // TODO: Regenerate thumbnail from cropped image if needed
+                    updatedPage.imageUrl = urls.imageUrl
+                    updatedPage.thumbnailUrl = urls.thumbnailUrl
                     
                     updatedPages.append(updatedPage)
                 }

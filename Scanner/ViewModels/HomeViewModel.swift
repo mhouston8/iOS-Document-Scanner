@@ -63,7 +63,7 @@ class HomeViewModel: ObservableObject {
                 
                 for document in recentDocs {
                     do {
-                        let firstPage = try await databaseService.readFirstPageFromDatabase(documentId: document.id)
+                        let firstPage = try await databaseService.readDocumentThumbnail(documentId: document.id)
                         let recentDoc = RecentDocument(
                             document: document,
                             thumbnailUrl: firstPage?.thumbnailUrl

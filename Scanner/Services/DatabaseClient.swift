@@ -16,7 +16,7 @@ protocol DatabaseClientProtocol {
     
     // MARK: - Document Page Operations
     func readDocumentPagesFromDatabase(documentId: UUID) async throws -> [DocumentPage]
-    func readFirstPageFromDatabase(documentId: UUID) async throws -> DocumentPage?
-    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> String
+    func readDocumentThumbnail(documentId: UUID) async throws -> DocumentPage?
+    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String)
     func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws
 }

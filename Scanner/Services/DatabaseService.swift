@@ -35,11 +35,11 @@ class DatabaseService {
         try await client.readDocumentPagesFromDatabase(documentId: documentId)
     }
     
-    func readFirstPageFromDatabase(documentId: UUID) async throws -> DocumentPage? {
-        try await client.readFirstPageFromDatabase(documentId: documentId)
+    func readDocumentThumbnail(documentId: UUID) async throws -> DocumentPage? {
+        try await client.readDocumentThumbnail(documentId: documentId)
     }
     
-    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> String {
+    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
         try await client.uploadDocumentPageToStorage(page, image: image)
     }
     

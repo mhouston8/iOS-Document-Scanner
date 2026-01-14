@@ -58,7 +58,7 @@ class FilesViewModel: ObservableObject {
                 
                 for document in fetchedDocuments {
                     do {
-                        let firstPage = try await databaseService.readFirstPageFromDatabase(documentId: document.id)
+                        let firstPage = try await databaseService.readDocumentThumbnail(documentId: document.id)
                         let docWithThumbnail = DocumentWithThumbnail(
                             document: document,
                             thumbnailUrl: firstPage?.thumbnailUrl

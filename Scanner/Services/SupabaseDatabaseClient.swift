@@ -271,7 +271,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
-    func readFirstPageFromDatabase(documentId: UUID) async throws -> DocumentPage? {
+    func readDocumentThumbnail(documentId: UUID) async throws -> DocumentPage? {
         do {
             let response: [DocumentPage] = try await client.database
                 .from("DocumentPage")
@@ -284,21 +284,30 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             
             return response.first
         } catch {
-            let error = DatabaseError.fetchFailed("Failed to read first page: \(error.localizedDescription)")
-            print("ERROR [readFirstPageFromDatabase]: \(error.localizedDescription)")
-            print("ERROR [readFirstPageFromDatabase]: Original error: \(error)")
+            let error = DatabaseError.fetchFailed("Failed to read document thumbnail: \(error.localizedDescription)")
+            print("ERROR [readDocumentThumbnail]: \(error.localizedDescription)")
+            print("ERROR [readDocumentThumbnail]: Original error: \(error)")
             throw error
         }
     }
     
-    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> String {
+    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
         let uid = try await client.auth.session.user.id.uuidString.lowercased()
         let documentPath = "\(uid)/\(page.documentId.uuidString)/page_\(page.pageNumber).jpg"
+        let thumbnailPath = "\(uid)/\(page.documentId.uuidString)/thumbnail_\(page.pageNumber).jpg"
         
         // Convert UIImage to Data
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             let error = StorageError.conversionFailed("Failed to convert image to JPEG data")
-            print("ERROR [uploadDocumentPage]: \(error.localizedDescription)")
+            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
+            throw error
+        }
+        
+        // Generate thumbnail
+        let thumbnail = generateThumbnail(from: image)
+        guard let thumbnailData = thumbnail.jpegData(compressionQuality: 0.7) else {
+            let error = StorageError.conversionFailed("Failed to convert thumbnail to JPEG data")
+            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
             throw error
         }
         
@@ -308,17 +317,39 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                 .from(SupabaseConfig.documentsBucket)
                 .upload(documentPath, data: imageData, options: FileOptions(contentType: "image/jpeg", upsert: true))
             
-            // Get public URL
-            let url = try client.storage
+            // Get public URL for image
+            let imageUrl = try client.storage
                 .from(SupabaseConfig.documentsBucket)
                 .getPublicURL(path: documentPath)
             
             print("Uploaded DocumentPage image: \(documentPath)")
-            return url.absoluteString
+            
+            // Upload thumbnail to Storage
+            var thumbnailUrl: String
+            do {
+                try await client.storage
+                    .from(SupabaseConfig.thumbnailsBucket)
+                    .upload(thumbnailPath, data: thumbnailData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+                
+                // Get public URL for thumbnail
+                let thumbnailUrlObj = try client.storage
+                    .from(SupabaseConfig.thumbnailsBucket)
+                    .getPublicURL(path: thumbnailPath)
+                
+                thumbnailUrl = thumbnailUrlObj.absoluteString
+                print("Uploaded DocumentPage thumbnail: \(thumbnailPath)")
+            } catch {
+                print("WARNING [uploadDocumentPageToStorage]: Failed to upload thumbnail: \(error)")
+                // Don't fail the whole operation if thumbnail upload fails
+                // Return empty string or existing thumbnail URL
+                thumbnailUrl = page.thumbnailUrl ?? ""
+            }
+            
+            return (imageUrl: imageUrl.absoluteString, thumbnailUrl: thumbnailUrl)
         } catch {
             let error = StorageError.uploadFailed("Failed to upload DocumentPage image: \(error.localizedDescription)")
-            print("ERROR [uploadDocumentPage]: \(error.localizedDescription)")
-            print("ERROR [uploadDocumentPage]: Original error: \(error)")
+            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
+            print("ERROR [uploadDocumentPageToStorage]: Original error: \(error)")
             throw error
         }
     }
