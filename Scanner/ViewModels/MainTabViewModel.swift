@@ -66,7 +66,7 @@ class MainTabViewModel: ObservableObject {
                 )
                 
                 // 4. Save document and pages to database
-                try await databaseService.saveDocument(document, pages: images)
+                try await databaseService.createDocument(document, pages: images)
                 
                 print("Successfully saved document '\(name)' with \(images.count) pages")
                 

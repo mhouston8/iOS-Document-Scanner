@@ -17,8 +17,8 @@ class DatabaseService {
     
     // MARK: - Document Operations
     
-    func saveDocument(_ document: Document, pages: [UIImage]) async throws {
-        try await client.saveDocument(document, pages: pages)
+    func createDocument(_ document: Document, pages: [UIImage]) async throws {
+        try await client.createDocument(document, pages: pages)
     }
     
     func readDocuments(userId: UUID) async throws -> [Document] {
@@ -39,8 +39,8 @@ class DatabaseService {
         try await client.readDocumentThumbnail(documentId: documentId)
     }
     
-    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
-        try await client.uploadDocumentPageToStorage(page, image: image)
+    func updateDocumentPageInStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
+        try await client.updateDocumentPageInStorage(page, image: image)
     }
     
     func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws {

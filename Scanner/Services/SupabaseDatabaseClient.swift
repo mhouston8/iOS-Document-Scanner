@@ -80,7 +80,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
     
     // MARK: - Document Operations
     
-    func saveDocument(_ document: Document, pages: [UIImage]) async throws {
+    func createDocument(_ document: Document, pages: [UIImage]) async throws {
         // Track uploaded files for cleanup on error
         var uploadedPaths: [String] = []
         let uid = try await client.auth.session.user.id.uuidString.lowercased()
@@ -124,8 +124,8 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     pageUrls.append(url.absoluteString)
                 } catch {
                     let error = StorageError.uploadFailed("Failed to upload page \(index + 1): \(error.localizedDescription)")
-                    print("ERROR [saveDocument]: \(error.localizedDescription)")
-                    print("ERROR [saveDocument]: Original error: \(error)")
+            print("ERROR [createDocument]: \(error.localizedDescription)")
+            print("ERROR [createDocument]: Original error: \(error)")
                     throw error
                 }
                 
@@ -143,7 +143,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     
                     thumbnailUrls.append(thumbnailUrl.absoluteString)
                 } catch {
-                    print("WARNING [saveDocument]: Failed to upload thumbnail \(index + 1): \(error)")
+                    print("WARNING [createDocument]: Failed to upload thumbnail \(index + 1): \(error)")
                     // Don't fail the whole operation if thumbnail upload fails
                     thumbnailUrls.append(nil)
                 }
@@ -157,8 +157,8 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     .execute()
             } catch {
                 let error = DatabaseError.insertFailed("Failed to create document record: \(error.localizedDescription)")
-                print("ERROR [saveDocument]: \(error.localizedDescription)")
-                print("ERROR [saveDocument]: Original error: \(error)")
+            print("ERROR [createDocument]: \(error.localizedDescription)")
+            print("ERROR [createDocument]: Original error: \(error)")
                 throw error
             }
             
@@ -180,29 +180,29 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                         .execute()
                 } catch {
                     let error = DatabaseError.insertFailed("Failed to create page \(index + 1) record: \(error.localizedDescription)")
-                    print("ERROR [saveDocument]: \(error.localizedDescription)")
-                    print("ERROR [saveDocument]: Original error: \(error)")
+            print("ERROR [createDocument]: \(error.localizedDescription)")
+            print("ERROR [createDocument]: Original error: \(error)")
                     throw error
                 }
             }
             
-            print("Successfully saved document: \(document.name) with \(pages.count) pages")
+            print("Successfully created document: \(document.name) with \(pages.count) pages")
             
         } catch {
-            print("ERROR [saveDocument]: Failed to save document '\(document.name)'")
-            print("ERROR [saveDocument]: Error type: \(type(of: error))")
-            print("ERROR [saveDocument]: Error description: \(error.localizedDescription)")
+            print("ERROR [createDocument]: Failed to create document '\(document.name)'")
+            print("ERROR [createDocument]: Error type: \(type(of: error))")
+            print("ERROR [createDocument]: Error description: \(error.localizedDescription)")
             if let storageError = error as? StorageError {
-                print("ERROR [saveDocument]: Storage error: \(storageError.localizedDescription)")
+                print("ERROR [createDocument]: Storage error: \(storageError.localizedDescription)")
             } else if let databaseError = error as? DatabaseError {
-                print("ERROR [saveDocument]: Database error: \(databaseError.localizedDescription)")
+                print("ERROR [createDocument]: Database error: \(databaseError.localizedDescription)")
             } else {
-                print("ERROR [saveDocument]: Unexpected error: \(error)")
+                print("ERROR [createDocument]: Unexpected error: \(error)")
             }
             
             // Cleanup: Delete uploaded files if database operations failed
             if !uploadedPaths.isEmpty {
-                print("ERROR [saveDocument]: Cleaning up \(uploadedPaths.count) uploaded file(s)...")
+                print("ERROR [createDocument]: Cleaning up \(uploadedPaths.count) uploaded file(s)...")
                 for path in uploadedPaths {
                     do {
                         // Determine which bucket based on path
@@ -210,9 +210,9 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                         try await client.storage
                             .from(bucket)
                             .remove(paths: [path])
-                        print("ERROR [saveDocument]: Cleaned up file: \(path)")
+                        print("ERROR [createDocument]: Cleaned up file: \(path)")
                     } catch {
-                        print("ERROR [saveDocument]: Warning - Failed to cleanup file \(path): \(error)")
+                        print("ERROR [createDocument]: Warning - Failed to cleanup file \(path): \(error)")
                     }
                 }
             }
@@ -291,7 +291,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
-    func uploadDocumentPageToStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
+    func updateDocumentPageInStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String) {
         let uid = try await client.auth.session.user.id.uuidString.lowercased()
         let documentPath = "\(uid)/\(page.documentId.uuidString)/page_\(page.pageNumber).jpg"
         let thumbnailPath = "\(uid)/\(page.documentId.uuidString)/thumbnail_\(page.pageNumber).jpg"
@@ -299,7 +299,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         // Convert UIImage to Data
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             let error = StorageError.conversionFailed("Failed to convert image to JPEG data")
-            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPageInStorage]: \(error.localizedDescription)")
             throw error
         }
         
@@ -307,7 +307,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         let thumbnail = generateThumbnail(from: image)
         guard let thumbnailData = thumbnail.jpegData(compressionQuality: 0.7) else {
             let error = StorageError.conversionFailed("Failed to convert thumbnail to JPEG data")
-            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPageInStorage]: \(error.localizedDescription)")
             throw error
         }
         
@@ -322,7 +322,7 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                 .from(SupabaseConfig.documentsBucket)
                 .getPublicURL(path: documentPath)
             
-            print("Uploaded DocumentPage image: \(documentPath)")
+            print("Updated DocumentPage image: \(documentPath)")
             
             // Upload thumbnail to Storage
             var thumbnailUrl: String
@@ -337,9 +337,9 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                     .getPublicURL(path: thumbnailPath)
                 
                 thumbnailUrl = thumbnailUrlObj.absoluteString
-                print("Uploaded DocumentPage thumbnail: \(thumbnailPath)")
+                print("Updated DocumentPage thumbnail: \(thumbnailPath)")
             } catch {
-                print("WARNING [uploadDocumentPageToStorage]: Failed to upload thumbnail: \(error)")
+                print("WARNING [updateDocumentPageInStorage]: Failed to upload thumbnail: \(error)")
                 // Don't fail the whole operation if thumbnail upload fails
                 // Return empty string or existing thumbnail URL
                 thumbnailUrl = page.thumbnailUrl ?? ""
@@ -347,9 +347,9 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             
             return (imageUrl: imageUrl.absoluteString, thumbnailUrl: thumbnailUrl)
         } catch {
-            let error = StorageError.uploadFailed("Failed to upload DocumentPage image: \(error.localizedDescription)")
-            print("ERROR [uploadDocumentPageToStorage]: \(error.localizedDescription)")
-            print("ERROR [uploadDocumentPageToStorage]: Original error: \(error)")
+            let error = StorageError.uploadFailed("Failed to update DocumentPage image: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPageInStorage]: \(error.localizedDescription)")
+            print("ERROR [updateDocumentPageInStorage]: Original error: \(error)")
             throw error
         }
     }
