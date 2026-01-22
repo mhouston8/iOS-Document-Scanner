@@ -98,9 +98,9 @@ private struct HomeViewContent: View {
             }
             .navigationTitle("Home")
             .onAppear {
-                if viewModel.recentDocuments.isEmpty {
+                //if viewModel.recentDocuments.isEmpty {
                     viewModel.loadRecentDocuments()
-                }
+                //}
             }
             .fullScreenCover(item: $editingDocument) { document in
                 PhotoEditView(document: document)
@@ -227,7 +227,8 @@ private struct HomeViewContent: View {
     private func recentDocumentCard(recentDoc: RecentDocument) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             // Thumbnail
-            if let thumbnailUrlString = recentDoc.thumbnailUrl, let thumbnailUrl = URL(string: thumbnailUrlString) {
+            if let thumbnailUrlString = recentDoc.thumbnailUrl,
+               let thumbnailUrl = DatabaseService.cacheBustedURL(from: thumbnailUrlString) {
                 AsyncImage(url: thumbnailUrl) { phase in
                     switch phase {
                     case .empty:

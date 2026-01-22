@@ -116,7 +116,8 @@ private struct DocumentRowView: View {
     
     private var thumbnailView: some View {
         Group {
-            if let thumbnailUrlString = documentWithThumbnail.thumbnailUrl, let thumbnailUrl = URL(string: thumbnailUrlString) {
+            if let thumbnailUrlString = documentWithThumbnail.thumbnailUrl,
+               let thumbnailUrl = DatabaseService.cacheBustedURL(from: thumbnailUrlString) {
                 AsyncImage(url: thumbnailUrl) { phase in
                     switch phase {
                     case .empty:

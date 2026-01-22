@@ -9,6 +9,40 @@ import Foundation
 import UIKit
 
 class DatabaseService {
+    
+    // MARK: - Cache-Busting Helper
+    
+    /// Adds cache-busting query parameter to URL to ensure fresh image loads
+    ///
+    /// **How it works:**
+    /// - When you update an image in Storage, the URL stays the same (e.g., `image.jpg`)
+    /// - Browsers cache images by URL, so they show the old cached version
+    /// - Adding a query parameter (e.g., `?t=1234567890`) makes the URL different
+    /// - Browser treats it as a new URL and fetches fresh
+    ///
+    /// **Why it doesn't break:**
+    /// - Servers ignore query parameters for static files
+    /// - `image.jpg` and `image.jpg?t=123` both serve the same file
+    /// - Only the browser's cache behavior changes
+    ///
+    /// **Example:**
+    /// - Input:  `"https://example.com/image.jpg"`
+    /// - Output: `"https://example.com/image.jpg?t=1735689600"` (timestamp changes each call)
+    static func cacheBustedURL(from urlString: String) -> URL? {
+        guard var url = URL(string: urlString) else { return nil }
+        
+        // Add cache-busting parameter if not already present
+        // Using "t" (time) with current timestamp ensures URL is unique each time
+        if url.query == nil {
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970)))]
+            if let updatedUrl = components?.url {
+                return updatedUrl
+            }
+        }
+        
+        return url
+    }
     private let client: DatabaseClientProtocol
     
     init(client: DatabaseClientProtocol) {

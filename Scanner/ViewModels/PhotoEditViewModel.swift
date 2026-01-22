@@ -44,19 +44,23 @@ class PhotoEditViewModel: ObservableObject {
                 // Load images from URLs
                 var loadedImages: [UIImage] = []
                 for page in pages {
-                    if let imageUrl = URL(string: page.imageUrl) {
-                        do {
-                            let (data, _) = try await URLSession.shared.data(from: imageUrl)
-                            if let image = UIImage(data: data) {
-                                loadedImages.append(image)
-                            } else {
-                                print("WARNING [PhotoEditViewModel]: Failed to create UIImage from data for page \(page.pageNumber)")
-                                // Add placeholder or skip
-                            }
-                        } catch {
-                            print("ERROR [PhotoEditViewModel]: Failed to load image for page \(page.pageNumber): \(error)")
-                            // Continue loading other pages
+                    guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else { continue }
+                    
+                    do {
+                        // Configure URLSession to bypass cache
+                        var request = URLRequest(url: imageUrl)
+                        request.cachePolicy = .reloadIgnoringLocalCacheData
+                        
+                        let (data, _) = try await URLSession.shared.data(for: request)
+                        if let image = UIImage(data: data) {
+                            loadedImages.append(image)
+                        } else {
+                            print("WARNING [PhotoEditViewModel]: Failed to create UIImage from data for page \(page.pageNumber)")
+                            // Add placeholder or skip
                         }
+                    } catch {
+                        print("ERROR [PhotoEditViewModel]: Failed to load image for page \(page.pageNumber): \(error)")
+                        // Continue loading other pages
                     }
                 }
                 
