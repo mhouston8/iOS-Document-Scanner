@@ -146,9 +146,13 @@ struct PhotoEditView: View {
             
             Button("Done") {
                 if viewModel.hasUnsavedChanges {
-                    viewModel.saveChanges()
+                    Task {
+                        await viewModel.saveChanges()
+                        dismiss()
+                    }
+                } else {
+                    dismiss()
                 }
-                dismiss()
             }
             .foregroundColor(viewModel.hasUnsavedChanges ? .blue : .gray)
             .fontWeight(.semibold)

@@ -144,12 +144,11 @@ class PhotoEditViewModel: ObservableObject {
     
     // MARK: - Saving
     
-    func saveChanges() {
-        Task {
-            isSaving = true
-            errorMessage = nil
-            
-            do {
+    func saveChanges() async {
+        isSaving = true
+        errorMessage = nil
+        
+        do {
                 // Only save pages that have been edited (compare editedImages with original images)
                 var pagesToUpdate: [(page: DocumentPage, image: UIImage)] = []
                 
@@ -214,7 +213,6 @@ class PhotoEditViewModel: ObservableObject {
             }
             
             isSaving = false
-        }
     }
     
     // MARK: - Helper Methods

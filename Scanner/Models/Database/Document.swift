@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Document: Identifiable, Codable {
+struct Document: Identifiable, Codable, Equatable {
     let id: UUID
     let userId: UUID
     var name: String

@@ -29,19 +29,18 @@ class DatabaseService {
     /// - Input:  `"https://example.com/image.jpg"`
     /// - Output: `"https://example.com/image.jpg?t=1735689600"` (timestamp changes each call)
     static func cacheBustedURL(from urlString: String) -> URL? {
-        guard var url = URL(string: urlString) else { return nil }
+        guard let url = URL(string: urlString) else { return nil }
         
-        // Add cache-busting parameter if not already present
-        // Using "t" (time) with current timestamp ensures URL is unique each time
-        if url.query == nil {
-            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            components?.queryItems = [URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970)))]
-            if let updatedUrl = components?.url {
-                return updatedUrl
-            }
-        }
+        // Always update/replace the cache-busting parameter with current timestamp
+        // This ensures the URL is unique each time, forcing fresh image loads
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         
-        return url
+        // Remove existing "t" parameter if present, then add new one with current timestamp
+        var queryItems = components?.queryItems?.filter { $0.name != "t" } ?? []
+        queryItems.append(URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970))))
+        components?.queryItems = queryItems
+        
+        return components?.url ?? url
     }
     private let client: DatabaseClientProtocol
     

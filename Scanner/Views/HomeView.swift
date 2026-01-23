@@ -102,6 +102,17 @@ private struct HomeViewContent: View {
                     viewModel.loadRecentDocuments()
                 //}
             }
+            .onChange(of: editingDocument) { oldValue, newValue in
+                // editingDocument is the Document currently open in PhotoEditView
+                // - When you tap a document to edit: editingDocument changes from nil → Document (we don't reload here)
+                // - When you dismiss PhotoEditView (tap Done/swipe down): editingDocument changes from Document → nil
+                // - newValue == nil means "no document is currently being edited" (editor was closed)
+                // - This happens regardless of whether changes were saved or not
+                // - We reload to show updated thumbnails after editing
+                if oldValue != nil && newValue == nil {
+                    viewModel.loadRecentDocuments()
+                }
+            }
             .fullScreenCover(item: $editingDocument) { document in
                 PhotoEditView(document: document)
             }
