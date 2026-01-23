@@ -122,7 +122,6 @@ private struct HomeViewContent: View {
     // MARK: - Helper Functions
     
     private func loadImageAndShowEditor(from recentDoc: RecentDocument) {
-        print("DEBUG [HomeView]: Opening editor for document \(recentDoc.document.id)")
         editingDocument = recentDoc.document
     }
     
@@ -225,6 +224,7 @@ private struct HomeViewContent: View {
                     HStack(spacing: 12) {
                         ForEach(viewModel.recentDocuments) { recentDoc in
                             recentDocumentCard(recentDoc: recentDoc)
+                                .contentShape(Rectangle()) //improves hit testing/tappable area
                                 .onTapGesture {
                                     loadImageAndShowEditor(from: recentDoc)
                                 }
