@@ -106,73 +106,106 @@ struct WatermarkView: View {
     // MARK: - Bottom Controls
     
     private var bottomControls: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Text Input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Watermark Text")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                    
-                    TextField("Enter text", text: $watermarkText)
-                        .textFieldStyle(.roundedBorder)
-                        .foregroundColor(.black)
-                }
-                .padding(.horizontal, 20)
+        VStack(spacing: 0) {
+            // Text Input
+            VStack(spacing: 8) {
+                TextField("Enter watermark text", text: $watermarkText)
+                    .textFieldStyle(.plain)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(8)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+                .background(Color.white.opacity(0.2))
+            
+            // Position Grid
+            VStack(spacing: 12) {
+                Text("Position")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
-                // Position Selector
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Position")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                    
-                    Picker("Position", selection: $watermarkPosition) {
-                        ForEach(WatermarkPosition.allCases, id: \.self) { position in
-                            Text(position.rawValue).tag(position)
-                        }
+                // 3x2 Grid for positions
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        positionButton(.topLeft)
+                        positionButton(.topRight)
                     }
-                    .pickerStyle(.segmented)
+                    HStack(spacing: 8) {
+                        positionButton(.center)
+                    }
+                    HStack(spacing: 8) {
+                        positionButton(.bottomLeft)
+                        positionButton(.bottomRight)
+                    }
                 }
-                .padding(.horizontal, 20)
-                
-                // Opacity Slider
-                VStack(alignment: .leading, spacing: 8) {
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            
+            Divider()
+                .background(Color.white.opacity(0.2))
+            
+            // Opacity and Size Controls
+            VStack(spacing: 16) {
+                // Opacity
+                VStack(spacing: 8) {
                     HStack {
                         Text("Opacity")
                             .font(.subheadline)
                             .foregroundColor(.white)
                         Spacer()
                         Text("\(Int(watermarkOpacity * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
                     }
-                    
                     Slider(value: $watermarkOpacity, in: 0...1)
                         .tint(.cyan)
                 }
-                .padding(.horizontal, 20)
                 
-                // Size Slider
-                VStack(alignment: .leading, spacing: 8) {
+                // Size
+                VStack(spacing: 8) {
                     HStack {
                         Text("Size")
                             .font(.subheadline)
                             .foregroundColor(.white)
                         Spacer()
                         Text("\(Int(watermarkSize * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
                     }
-                    
                     Slider(value: $watermarkSize, in: 0.1...1)
                         .tint(.cyan)
                 }
-                .padding(.horizontal, 20)
             }
+            .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
-        .background(Color.black.opacity(0.7))
-        .frame(maxHeight: 300)
+        .background(Color.black.opacity(0.8))
+    }
+    
+    private func positionButton(_ position: WatermarkPosition) -> some View {
+        Button(action: {
+            watermarkPosition = position
+        }) {
+            Text(position.rawValue)
+                .font(.caption)
+                .foregroundColor(watermarkPosition == position ? .black : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    watermarkPosition == position
+                        ? Color.cyan
+                        : Color.white.opacity(0.1)
+                )
+                .cornerRadius(8)
+        }
     }
     
     // MARK: - Actions
