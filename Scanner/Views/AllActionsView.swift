@@ -22,22 +22,16 @@ struct AllActionsView: View {
                 editAndEnhanceSection
                 signAndMarkSection
                 organizeSection
-                
-                // Recent Documents
-                recentDocumentsSection
             }
             .padding()
         }
-        .navigationTitle("Home")
+        .navigationTitle("Document Tools")
     }
     
     // MARK: - Header
     
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Welcome")
-                .font(.title)
-                .fontWeight(.bold)
             Text("You have 12 documents")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
@@ -113,40 +107,6 @@ struct AllActionsView: View {
                 ActionItem(icon: "magnifyingglass", title: "Search", color: .gray)
             ]
         )
-    }
-    
-    // MARK: - Recent Documents
-    
-    private var recentDocumentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Documents")
-                .font(.headline)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(0..<5) { index in
-                        recentDocumentCard(index: index)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func recentDocumentCard(index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Rectangle()
-                .fill(Color(.systemGray5))
-                .frame(width: 120, height: 160)
-                .cornerRadius(8)
-            
-            Text("Document \(index + 1)")
-                .font(.caption)
-                .lineLimit(1)
-            Text("2 hours ago")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .frame(width: 120)
     }
     
     // MARK: - Category Section Helper
