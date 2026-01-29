@@ -129,9 +129,12 @@ struct WatermarkView: View {
     private func createPatternWatermark(size: CGSize) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { context in
-            // Calculate font size
-            let fontSize = CGFloat(watermarkSize * 40)
-            let spacing = CGFloat(watermarkSpacing)
+            // Calculate font size relative to image dimensions
+            // Use the smaller dimension as base to ensure text scales properly
+            let baseSize = min(size.width, size.height)
+            let fontSize = CGFloat(watermarkSize) * baseSize * 0.08 // 8% of smaller dimension at max size
+            // Scale spacing relative to image size (spacing slider 100-400 represents 10%-40% of baseSize)
+            let spacing = CGFloat(watermarkSpacing / 1000.0) * baseSize
             let angleRadians = watermarkAngle * .pi / 180
             
             // Create text attributes
@@ -284,8 +287,26 @@ struct WatermarkView: View {
     // MARK: - Actions
     
     private func applyWatermark() {
-        // TODO: Composite watermark onto image
-        editedImage = image
+        guard !watermarkText.isEmpty else {
+            editedImage = image
+            dismiss()
+            return
+        }
+        
+        // Create watermark pattern at full image resolution
+        let watermarkPattern = createPatternWatermark(size: image.size)
+        
+        // Composite watermark onto original image
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let watermarkedImage = renderer.image { context in
+            // Draw original image
+            image.draw(at: .zero)
+            
+            // Draw watermark pattern on top
+            watermarkPattern.draw(at: .zero, blendMode: .normal, alpha: 1.0)
+        }
+        
+        editedImage = watermarkedImage
         dismiss()
     }
 }
