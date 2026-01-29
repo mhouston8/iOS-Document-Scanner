@@ -15,6 +15,8 @@ struct PKCanvasViewWrapper: UIViewRepresentable {
     
     func makeUIView(context: Context) -> PKCanvasView {
         canvasView.drawingPolicy = drawingPolicy
+        canvasView.backgroundColor = .clear // Make canvas transparent so image shows through
+        canvasView.isOpaque = false // Allow transparency
         if let tool = tool {
             canvasView.tool = tool
         }
@@ -22,6 +24,8 @@ struct PKCanvasViewWrapper: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        uiView.backgroundColor = .clear // Ensure background stays clear
+        uiView.isOpaque = false
         if let tool = tool {
             uiView.tool = tool
         }

@@ -83,16 +83,20 @@ struct AnnotateView: View {
     private var canvasWithImage: some View {
         GeometryReader { geometry in
             ZStack {
+                // Background image
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black) // Black background for image
                 
+                // Transparent canvas overlay for drawing
                 PKCanvasViewWrapper(
                     canvasView: $canvasView,
                     tool: toolForAnnotation(selectedTool, color: penColor, width: penWidth)
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.clear) // Ensure canvas is transparent
             }
         }
     }
