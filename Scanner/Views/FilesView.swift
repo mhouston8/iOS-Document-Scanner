@@ -18,6 +18,7 @@ struct FilesView: View {
 private struct FilesViewContent: View {
     let authService: AuthenticationService
     @StateObject private var viewModel: FilesViewModel
+    @State private var editingDocument: Document? = nil
     
     init(authService: AuthenticationService) {
         self.authService = authService
@@ -62,6 +63,9 @@ private struct FilesViewContent: View {
                 } else {
                     List(viewModel.documents) { documentWithThumbnail in
                         DocumentRowView(documentWithThumbnail: documentWithThumbnail)
+                            .onTapGesture {
+                                editingDocument = documentWithThumbnail.document
+                            }
                     }
                 }
             }
@@ -71,6 +75,15 @@ private struct FilesViewContent: View {
             }
             .onAppear {
                 viewModel.loadDocuments()
+            }
+            .onChange(of: editingDocument) { oldValue, newValue in
+                // When editingDocument becomes nil (fullScreenCover dismissed), reload documents
+                if oldValue != nil && newValue == nil {
+                    viewModel.loadDocuments()
+                }
+            }
+            .fullScreenCover(item: $editingDocument) { document in
+                DocumentEditView(document: document)
             }
         }
     }
@@ -110,6 +123,7 @@ private struct DocumentRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
     
     private var thumbnailView: some View {
