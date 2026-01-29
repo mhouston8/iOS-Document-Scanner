@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import CoreImage
+import CoreImage.CIFilterBuiltins
 
 struct FiltersView: View {
     let image: UIImage
@@ -160,9 +162,112 @@ struct FiltersView: View {
     }
     
     private func applyFilterToImage(_ image: UIImage, filter: Filter, intensity: Double) -> UIImage {
-        // TODO: Apply actual filter effects
-        // For now, return original image
-        return image
+        guard filter != .original else { return image }
+        
+        guard let ciImage = CIImage(image: image) else { return image }
+        let context = CIContext()
+        
+        var filteredImage: CIImage?
+        
+        switch filter {
+        case .original:
+            return image
+            
+        case .blackWhite:
+            let colorControls = CIFilter.colorControls()
+            colorControls.inputImage = ciImage
+            colorControls.saturation = 0.0
+            filteredImage = colorControls.outputImage
+            
+        case .vintage:
+            // Use CIPhotoEffectInstant filter
+            if let filter = CIFilter(name: "CIPhotoEffectInstant") {
+                filter.setValue(ciImage, forKey: kCIInputImageKey)
+                filteredImage = filter.outputImage
+            }
+            
+        case .cool:
+            // Cool temperature: use color controls with slight brightness/contrast adjustment
+            // and reduce saturation slightly to simulate cool tone
+            let colorControls = CIFilter.colorControls()
+            colorControls.inputImage = ciImage
+            colorControls.brightness = 0.05
+            colorControls.contrast = 1.1
+            colorControls.saturation = 0.9
+            filteredImage = colorControls.outputImage
+            
+        case .warm:
+            // Warm temperature: use color controls with warm tone simulation
+            let colorControls = CIFilter.colorControls()
+            colorControls.inputImage = ciImage
+            colorControls.brightness = 0.1
+            colorControls.contrast = 1.05
+            colorControls.saturation = 1.1
+            filteredImage = colorControls.outputImage
+            
+        case .sepia:
+            let sepiaFilter = CIFilter.sepiaTone()
+            sepiaFilter.inputImage = ciImage
+            sepiaFilter.intensity = Float(intensity)
+            filteredImage = sepiaFilter.outputImage
+            
+        case .dramatic:
+            // Use CIPhotoEffectDramatic filter
+            if let filter = CIFilter(name: "CIPhotoEffectDramatic") {
+                filter.setValue(ciImage, forKey: kCIInputImageKey)
+                filteredImage = filter.outputImage
+            }
+            
+        case .noir:
+            // Use CIPhotoEffectNoir filter
+            if let filter = CIFilter(name: "CIPhotoEffectNoir") {
+                filter.setValue(ciImage, forKey: kCIInputImageKey)
+                filteredImage = filter.outputImage
+            }
+        }
+        
+        guard var outputImage = filteredImage else { return image }
+        
+        // Apply intensity by blending filtered image with original (except for sepia which has built-in intensity)
+        if intensity < 1.0 && filter != .sepia {
+            // Render both images to CGImage for blending
+            guard let filteredCG = context.createCGImage(outputImage, from: outputImage.extent),
+                  let originalCG = context.createCGImage(ciImage, from: ciImage.extent) else {
+                return image
+            }
+            
+            // Blend using UIKit/Core Graphics
+            let size = image.size
+            let scale = image.scale
+            UIGraphicsBeginImageContextWithOptions(size, false, scale)
+            defer { UIGraphicsEndImageContext() }
+            
+            guard let ctx = UIGraphicsGetCurrentContext() else {
+                return image
+            }
+            
+            // Draw original image
+            UIImage(cgImage: originalCG, scale: scale, orientation: image.imageOrientation)
+                .draw(in: CGRect(origin: .zero, size: size))
+            
+            // Draw filtered image with opacity based on intensity
+            ctx.setAlpha(CGFloat(intensity))
+            UIImage(cgImage: filteredCG, scale: scale, orientation: image.imageOrientation)
+                .draw(in: CGRect(origin: .zero, size: size))
+            
+            if let blendedImage = UIGraphicsGetImageFromCurrentImageContext() {
+                return blendedImage
+            }
+        }
+        
+        let finalImage = outputImage
+        
+        // Render CIImage back to UIImage
+        guard let cgImage = context.createCGImage(finalImage, from: finalImage.extent) else {
+            return image
+        }
+        
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
     }
     
     private func applyFilter() {
