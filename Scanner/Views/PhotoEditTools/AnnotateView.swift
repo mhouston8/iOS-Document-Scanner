@@ -14,6 +14,7 @@ struct AnnotateView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var canvasView = PKCanvasView()
+    @State private var canvasSize: CGSize = .zero
     
     var body: some View {
         ZStack {
@@ -115,14 +116,69 @@ struct AnnotateView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.clear) // Ensure canvas is transparent
+                .onAppear {
+                    // Store the canvas display size for proper scaling when compositing
+                    canvasSize = geometry.size
+                }
+                .onChange(of: geometry.size) { oldValue, newValue in
+                    canvasSize = newValue
+                }
             }
         }
     }
     
     
     private func applyAnnotation() {
-        // TODO: Composite annotations onto image
-        editedImage = image
+        // Get the drawing from the canvas
+        let drawing = canvasView.drawing
+        
+        // Calculate the actual displayed image size (maintaining aspect ratio)
+        let imageAspectRatio = image.size.width / image.size.height
+        var displayedImageSize: CGSize
+        
+        if canvasSize.width / canvasSize.height > imageAspectRatio {
+            // Canvas is wider - image height fills canvas height
+            displayedImageSize = CGSize(
+                width: canvasSize.height * imageAspectRatio,
+                height: canvasSize.height
+            )
+        } else {
+            // Canvas is taller - image width fills canvas width
+            displayedImageSize = CGSize(
+                width: canvasSize.width,
+                height: canvasSize.width / imageAspectRatio
+            )
+        }
+        
+        // Calculate the scale factor from displayed size to actual image size
+        let scaleX = image.size.width / displayedImageSize.width
+        let scaleY = image.size.height / displayedImageSize.height
+        
+        // Create a renderer for compositing
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let annotatedImage = renderer.image { context in
+            // Draw the original image as the base
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+            
+            // Scale and translate the drawing to match the image coordinates
+            context.cgContext.saveGState()
+            
+            // Calculate offset to center the image in the canvas
+            let offsetX = (canvasSize.width - displayedImageSize.width) / 2
+            let offsetY = (canvasSize.height - displayedImageSize.height) / 2
+            
+            // Transform: translate to account for centering, then scale to image size
+            context.cgContext.translateBy(x: -offsetX * scaleX, y: -offsetY * scaleY)
+            context.cgContext.scaleBy(x: scaleX, y: scaleY)
+            
+            // Draw the PencilKit drawing
+            let drawingImage = drawing.image(from: CGRect(origin: .zero, size: canvasSize), scale: 1.0)
+            drawingImage.draw(at: .zero)
+            
+            context.cgContext.restoreGState()
+        }
+        
+        editedImage = annotatedImage
         dismiss()
     }
 }
