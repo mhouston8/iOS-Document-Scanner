@@ -11,7 +11,7 @@ import UIKit
 import Combine
 
 @MainActor
-class PhotoEditViewModel: ObservableObject {
+class DocumentEditViewModel: ObservableObject {
     @Published var pages: [DocumentPage] = []
     @Published var images: [UIImage] = []
     @Published var editedImages: [UIImage] = []

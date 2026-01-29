@@ -114,7 +114,7 @@ private struct HomeViewContent: View {
                 }
             }
             .fullScreenCover(item: $editingDocument) { document in
-                PhotoEditView(document: document)
+                DocumentEditView(document: document)
             }
         }
     }

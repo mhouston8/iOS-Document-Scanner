@@ -7,15 +7,15 @@
 
 import SwiftUI
 
-struct PhotoEditView: View {
+struct DocumentEditView: View {
     @Environment(\.dismiss) private var dismiss
     
-    @StateObject private var viewModel: PhotoEditViewModel
+    @StateObject private var viewModel: DocumentEditViewModel
     @State private var showingToolView: EditTool? = nil
     
     init(document: Document) {
         let databaseService = DatabaseService(client: SupabaseDatabaseClient())
-        _viewModel = StateObject(wrappedValue: PhotoEditViewModel(
+        _viewModel = StateObject(wrappedValue: DocumentEditViewModel(
             document: document,
             databaseService: databaseService
         ))
@@ -319,5 +319,5 @@ struct PhotoEditView: View {
         name: "Preview Document",
         pageCount: 1
     )
-    return PhotoEditView(document: document)
+    return DocumentEditView(document: document)
 }
