@@ -135,7 +135,7 @@ struct SignaturePadView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                PKCanvasViewWrapper(canvasView: $canvasView, tool: tool)
+                PKCanvasViewWrapper(canvasView: $canvasView)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationTitle("Sign")

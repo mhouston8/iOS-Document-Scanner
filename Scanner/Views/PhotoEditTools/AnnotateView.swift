@@ -14,25 +14,6 @@ struct AnnotateView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var canvasView = PKCanvasView()
-    @State private var selectedTool: AnnotationTool = .pen
-    @State private var penColor: Color = .black
-    @State private var penWidth: Double = 3
-    
-    enum AnnotationTool: String, CaseIterable {
-        case pen = "Pen"
-        case marker = "Marker"
-        case highlighter = "Highlighter"
-        case eraser = "Eraser"
-        
-        var icon: String {
-            switch self {
-            case .pen: return "pencil"
-            case .marker: return "pencil.tip"
-            case .highlighter: return "highlighter"
-            case .eraser: return "eraser"
-            }
-        }
-    }
     
     var body: some View {
         ZStack {
@@ -44,11 +25,49 @@ struct AnnotateView: View {
                 
                 // Canvas with Image
                 canvasWithImage
-                
-                // Bottom Toolbar
-                bottomToolbar
             }
         }
+        .onAppear {
+            setupToolPicker()
+        }
+        .onDisappear {
+            cleanupToolPicker()
+        }
+    }
+    
+    private func setupToolPicker() {
+        // Get the current window
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            return
+        }
+        
+        // Get or create the tool picker for the current window
+        guard let toolPicker = PKToolPicker.shared(for: window) else {
+            return
+        }
+        
+        toolPicker.addObserver(canvasView)
+        
+        // Make canvas first responder first, then show tool picker
+        DispatchQueue.main.async {
+            self.canvasView.becomeFirstResponder()
+            toolPicker.setVisible(true, forFirstResponder: self.canvasView)
+        }
+    }
+    
+    private func cleanupToolPicker() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            return
+        }
+        
+        guard let toolPicker = PKToolPicker.shared(for: window) else {
+            return
+        }
+        
+        toolPicker.setVisible(false, forFirstResponder: canvasView)
+        toolPicker.removeObserver(canvasView)
     }
     
     // MARK: - Top Bar
@@ -92,8 +111,7 @@ struct AnnotateView: View {
                 
                 // Transparent canvas overlay for drawing
                 PKCanvasViewWrapper(
-                    canvasView: $canvasView,
-                    tool: toolForAnnotation(selectedTool, color: penColor, width: penWidth)
+                    canvasView: $canvasView
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.clear) // Ensure canvas is transparent
@@ -101,110 +119,6 @@ struct AnnotateView: View {
         }
     }
     
-    // MARK: - Bottom Toolbar
-    
-    private var bottomToolbar: some View {
-        VStack(spacing: 0) {
-            // Tool Selection
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(AnnotationTool.allCases, id: \.self) { tool in
-                        toolButton(tool: tool)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-            }
-            .background(Color.black.opacity(0.7))
-            
-            // Color and Width Controls (if not eraser)
-            if selectedTool != .eraser {
-                HStack(spacing: 20) {
-                    // Color Picker
-                    colorPicker
-                    
-                    // Width Slider
-                    widthSlider
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.black.opacity(0.8))
-            }
-        }
-    }
-    
-    private func toolButton(tool: AnnotationTool) -> some View {
-        Button(action: {
-            selectedTool = tool
-        }) {
-            VStack(spacing: 6) {
-                Image(systemName: tool.icon)
-                    .font(.system(size: 22))
-                    .foregroundColor(selectedTool == tool ? .blue : .white)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(selectedTool == tool ? Color.blue.opacity(0.2) : Color.white.opacity(0.1))
-                    )
-                
-                Text(tool.rawValue)
-                    .font(.caption2)
-                    .foregroundColor(selectedTool == tool ? .blue : .white)
-            }
-        }
-    }
-    
-    private var colorPicker: some View {
-        HStack(spacing: 12) {
-            Text("Color")
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .frame(width: 60, alignment: .leading)
-            
-            HStack(spacing: 12) {
-                ForEach([Color.black, Color.red, Color.blue, Color.green, Color.yellow], id: \.self) { color in
-                    Button(action: {
-                        penColor = color
-                    }) {
-                        Circle()
-                            .fill(color)
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Circle()
-                                    .stroke(penColor == color ? Color.white : Color.clear, lineWidth: 2)
-                            )
-                    }
-                }
-            }
-        }
-    }
-    
-    private var widthSlider: some View {
-        HStack(spacing: 12) {
-            Text("Width")
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .frame(width: 60, alignment: .leading)
-            
-            Slider(value: $penWidth, in: 1...10)
-                .tint(.orange)
-        }
-    }
-    
-    // MARK: - Actions
-    
-    private func toolForAnnotation(_ tool: AnnotationTool, color: Color, width: Double) -> PKTool {
-        switch tool {
-        case .pen:
-            return PKInkingTool(.pen, color: UIColor(color), width: CGFloat(width))
-        case .marker:
-            return PKInkingTool(.marker, color: UIColor(color), width: CGFloat(width * 2))
-        case .highlighter:
-            return PKInkingTool(.marker, color: UIColor(color).withAlphaComponent(0.5), width: CGFloat(width * 3))
-        case .eraser:
-            return PKEraserTool(.vector)
-        }
-    }
     
     private func applyAnnotation() {
         // TODO: Composite annotations onto image
