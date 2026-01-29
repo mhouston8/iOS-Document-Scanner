@@ -246,7 +246,7 @@ struct FiltersView: View {
                 return image
             }
             
-            // Draw original image
+            // Draw original ximage
             UIImage(cgImage: originalCG, scale: scale, orientation: image.imageOrientation)
                 .draw(in: CGRect(origin: .zero, size: size))
             

@@ -86,13 +86,6 @@ struct DocumentEditView: View {
             NavigationStack {
                 toolView(for: tool)
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingToolView = nil
-                            }
-                        }
-                    }
             }
         }
         .fullScreenCover(isPresented: Binding(
