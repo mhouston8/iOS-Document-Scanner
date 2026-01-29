@@ -70,9 +70,7 @@ private struct FilesViewContent: View {
                 viewModel.loadDocuments()
             }
             .onAppear {
-                if viewModel.documents.isEmpty {
-                    viewModel.loadDocuments()
-                }
+                viewModel.loadDocuments()
             }
         }
     }
