@@ -164,7 +164,10 @@ struct DocumentEditView: View {
             } else {
                 TabView(selection: $viewModel.currentPageIndex) {
                     ForEach(0..<viewModel.editedImages.count, id: \.self) { index in
-                        ZoomableImageView(image: viewModel.editedImages[index])
+                        Image(uiImage: viewModel.editedImages[index])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .tag(index)
                     }
                 }
