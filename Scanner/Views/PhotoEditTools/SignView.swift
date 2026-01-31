@@ -277,7 +277,6 @@ struct SignaturePadView: View {
                 // Canvas with PKToolPicker
                 PKCanvasViewWrapperWithToolPicker(canvasView: $canvasView)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.white)
             }
             .navigationTitle("Sign")
             .navigationBarTitleDisplayMode(.inline)
@@ -308,8 +307,6 @@ struct PKCanvasViewWrapperWithToolPicker: UIViewRepresentable {
     @Binding var canvasView: PKCanvasView
     
     func makeUIView(context: Context) -> PKCanvasView {
-        canvasView.backgroundColor = .white
-        canvasView.isOpaque = true
         canvasView.drawingPolicy = .anyInput
         
         // Set default tool to black pen (visible on white background)
