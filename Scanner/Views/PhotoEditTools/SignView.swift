@@ -15,6 +15,21 @@ struct SignView: View {
     
     @State private var canvasView = PKCanvasView()
     @State private var showingSignaturePad = false
+    @State private var signatures: [Signature] = []
+    @State private var selectedSignature: Signature?
+    
+    struct Signature: Identifiable {
+        let id = UUID()
+        var drawing: PKDrawing
+        var position: CGPoint
+        var size: CGSize
+        
+        init(drawing: PKDrawing, position: CGPoint = .zero, size: CGSize = CGSize(width: 200, height: 100)) {
+            self.drawing = drawing
+            self.position = position
+            self.size = size
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -70,8 +85,27 @@ struct SignView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Signature overlay would go here
-                // For now, show placeholder
+                // Display all signatures as draggable overlays
+                ForEach(signatures) { signature in
+                    SignatureOverlayView(
+                        signature: signature,
+                        isSelected: selectedSignature?.id == signature.id,
+                        onDrag: { newPosition in
+                            if let index = signatures.firstIndex(where: { $0.id == signature.id }) {
+                                signatures[index].position = newPosition
+                            }
+                        },
+                        onTap: {
+                            selectedSignature = signature
+                        }
+                    )
+                    .position(signature.position)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Deselect when tapping empty area
+                selectedSignature = nil
             }
         }
     }
@@ -79,8 +113,11 @@ struct SignView: View {
     // MARK: - Bottom Controls
     
     private var bottomControls: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
+            // Add Signature Button
             Button(action: {
+                // Reset canvas for new signature
+                canvasView.drawing = PKDrawing()
                 showingSignaturePad = true
             }) {
                 HStack {
@@ -97,30 +134,127 @@ struct SignView: View {
             }
             .padding(.horizontal, 20)
             
-            // Signature options
-            HStack(spacing: 16) {
-                Button("Clear") {
-                    canvasView.drawing = PKDrawing()
+            // Signature management buttons
+            if !signatures.isEmpty {
+                HStack(spacing: 12) {
+                    // Delete selected signature
+                    if selectedSignature != nil {
+                        Button(action: {
+                            if let selected = selectedSignature {
+                                signatures.removeAll { $0.id == selected.id }
+                                selectedSignature = nil
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete")
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.red.opacity(0.3))
+                            .cornerRadius(8)
+                        }
+                    }
+                    
+                    // Clear all signatures
+                    Button(action: {
+                        signatures.removeAll()
+                        selectedSignature = nil
+                    }) {
+                        HStack {
+                            Image(systemName: "xmark.circle")
+                            Text("Clear All")
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.3))
+                        .cornerRadius(8)
+                    }
                 }
-                .foregroundColor(.white)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.3))
-                .cornerRadius(8)
             }
         }
         .padding(.vertical, 16)
         .background(Color.black.opacity(0.7))
         .sheet(isPresented: $showingSignaturePad) {
-            SignaturePadView(canvasView: $canvasView, tool: PKInkingTool(.pen, color: .black, width: 3))
+            SignaturePadView(
+                canvasView: $canvasView,
+                tool: PKInkingTool(.pen, color: .black, width: 3),
+                onDone: { drawing in
+                    if !drawing.bounds.isEmpty {
+                        // Add signature at center of screen initially
+                        let newSignature = Signature(
+                            drawing: drawing,
+                            position: CGPoint(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2),
+                            size: CGSize(width: 200, height: 100)
+                        )
+                        signatures.append(newSignature)
+                        selectedSignature = newSignature
+                    }
+                    showingSignaturePad = false
+                }
+            )
         }
     }
     
     // MARK: - Actions
     
     private func applySignature() {
-        // TODO: Composite signature onto image
-        editedImage = image
+        guard !signatures.isEmpty else {
+            editedImage = image
+            dismiss()
+            return
+        }
+        
+        // Composite all signatures onto the image
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let signedImage = renderer.image { context in
+            // Draw original image
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+            
+            // Draw each signature
+            for signature in signatures {
+                // Calculate signature position and size in image coordinates
+                let imageAspectRatio = image.size.width / image.size.height
+                let screenSize = UIScreen.main.bounds.size
+                let screenAspectRatio = screenSize.width / screenSize.height
+                
+                // Calculate displayed image size (aspect fit)
+                var displayedImageSize: CGSize
+                if screenAspectRatio > imageAspectRatio {
+                    displayedImageSize = CGSize(width: screenSize.height * imageAspectRatio, height: screenSize.height)
+                } else {
+                    displayedImageSize = CGSize(width: screenSize.width, height: screenSize.width / imageAspectRatio)
+                }
+                
+                // Calculate scale factor from screen to image
+                let scaleX = image.size.width / displayedImageSize.width
+                let scaleY = image.size.height / displayedImageSize.height
+                
+                // Convert signature position from screen coordinates to image coordinates
+                let imageX = (signature.position.x - (screenSize.width - displayedImageSize.width) / 2) * scaleX
+                let imageY = (signature.position.y - (screenSize.height - displayedImageSize.height) / 2) * scaleY
+                
+                // Scale signature size
+                let imageWidth = signature.size.width * scaleX
+                let imageHeight = signature.size.height * scaleY
+                
+                // Draw signature
+                context.cgContext.saveGState()
+                context.cgContext.translateBy(x: imageX, y: imageY)
+                context.cgContext.scaleBy(x: scaleX, y: scaleY)
+                
+                // Render signature drawing (already in black on white, so render directly)
+                let signatureImage = signature.drawing.image(from: signature.drawing.bounds, scale: 1.0)
+                signatureImage.draw(in: CGRect(origin: .zero, size: signature.size))
+                
+                context.cgContext.restoreGState()
+            }
+        }
+        
+        editedImage = signedImage
         dismiss()
     }
 }
@@ -130,24 +264,143 @@ struct SignView: View {
 struct SignaturePadView: View {
     @Binding var canvasView: PKCanvasView
     let tool: PKTool
+    let onDone: (PKDrawing) -> Void
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationStack {
-            VStack {
-                PKCanvasViewWrapper(canvasView: $canvasView)
+            VStack(spacing: 0) {
+                // Instructions
+                Text("Draw your signature")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding()
+                
+                // Canvas with PKToolPicker
+                PKCanvasViewWrapperWithToolPicker(canvasView: $canvasView)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.white)
             }
             .navigationTitle("Sign")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(.gray)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Apply") {
+                        onDone(canvasView.drawing)
+                        dismiss()
+                    }
+                    .foregroundColor(.blue)
+                    .fontWeight(.semibold)
                 }
             }
         }
+    }
+}
+
+// MARK: - PKCanvasView Wrapper with Tool Picker
+
+struct PKCanvasViewWrapperWithToolPicker: UIViewRepresentable {
+    @Binding var canvasView: PKCanvasView
+    
+    func makeUIView(context: Context) -> PKCanvasView {
+        canvasView.backgroundColor = .white
+        canvasView.isOpaque = true
+        canvasView.drawingPolicy = .anyInput
+        
+        // Set default tool to black pen (visible on white background)
+        let defaultTool = PKInkingTool(.pen, color: .black, width: 3)
+        canvasView.tool = defaultTool
+        
+        // Set up PKToolPicker - create new instance instead of using deprecated shared(for:)
+        if let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow }) {
+            
+            let toolPicker = PKToolPicker()
+            
+            // Set the tool picker's selected tool to black pen
+            toolPicker.selectedTool = defaultTool
+            
+            toolPicker.addObserver(canvasView)
+            toolPicker.setVisible(true, forFirstResponder: canvasView)
+            
+            // Store tool picker in coordinator
+            context.coordinator.toolPicker = toolPicker
+            context.coordinator.defaultTool = defaultTool
+            
+            // Make canvas first responder to show tool picker
+            DispatchQueue.main.async {
+                canvasView.becomeFirstResponder()
+                // Ensure tool is still set after becoming first responder
+                canvasView.tool = defaultTool
+                toolPicker.selectedTool = defaultTool
+            }
+        }
+        
+        return canvasView
+    }
+    
+    func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        // Ensure tool is set correctly on update
+        if let defaultTool = context.coordinator.defaultTool {
+            uiView.tool = defaultTool
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject {
+        var toolPicker: PKToolPicker?
+        var defaultTool: PKTool?
+    }
+}
+
+// MARK: - Signature Overlay View
+
+struct SignatureOverlayView: View {
+    let signature: SignView.Signature
+    let isSelected: Bool
+    let onDrag: (CGPoint) -> Void
+    let onTap: () -> Void
+    
+    @State private var dragOffset: CGSize = .zero
+    
+    var body: some View {
+        let signatureImage = signature.drawing.image(from: signature.drawing.bounds, scale: 1.0)
+        
+        Image(uiImage: signatureImage)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: signature.size.width, height: signature.size.height)
+            .border(isSelected ? Color.blue : Color.clear, width: 2)
+            .offset(dragOffset)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        let newPosition = CGPoint(
+                            x: signature.position.x + value.translation.width,
+                            y: signature.position.y + value.translation.height
+                        )
+                        onDrag(newPosition)
+                        dragOffset = .zero
+                    }
+            )
+            .onTapGesture {
+                onTap()
+            }
     }
 }
 
