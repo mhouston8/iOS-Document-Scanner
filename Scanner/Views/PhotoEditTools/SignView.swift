@@ -320,7 +320,13 @@ struct PKCanvasViewWrapperWithToolPicker: UIViewRepresentable {
         let toolPicker = PKToolPicker()
         
         // Set the tool picker's selected tool to black pen
-        toolPicker.selectedTool = defaultTool
+        // Note: selectedTool is deprecated in iOS 18.0, but we set canvas tool directly which works
+        canvasView.tool = defaultTool
+        if #available(iOS 18.0, *) {
+            // selectedToolItem is read-only, setting canvas tool directly is sufficient
+        } else {
+            toolPicker.selectedTool = defaultTool
+        }
         
         toolPicker.addObserver(canvasView)
         toolPicker.setVisible(true, forFirstResponder: canvasView)
@@ -334,7 +340,11 @@ struct PKCanvasViewWrapperWithToolPicker: UIViewRepresentable {
             canvasView.becomeFirstResponder()
             // Ensure tool is still set after becoming first responder
             canvasView.tool = defaultTool
-            toolPicker.selectedTool = defaultTool
+            if #available(iOS 18.0, *) {
+                // selectedToolItem is read-only, canvas tool is already set
+            } else {
+                toolPicker.selectedTool = defaultTool
+            }
         }
         
         return canvasView
