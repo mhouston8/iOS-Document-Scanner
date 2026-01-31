@@ -78,7 +78,7 @@ struct SignView: View {
     // MARK: - Image Preview
     
     private var imagePreviewWithSignature: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack {
                 Image(uiImage: image)
                     .resizable()
@@ -181,7 +181,6 @@ struct SignView: View {
         .sheet(isPresented: $showingSignaturePad) {
             SignaturePadView(
                 canvasView: $canvasView,
-                tool: PKInkingTool(.pen, color: .black, width: 3),
                 onDone: { drawing in
                     if !drawing.bounds.isEmpty {
                         // Add signature at center of screen initially
@@ -263,7 +262,6 @@ struct SignView: View {
 
 struct SignaturePadView: View {
     @Binding var canvasView: PKCanvasView
-    let tool: PKTool
     let onDone: (PKDrawing) -> Void
     @Environment(\.dismiss) private var dismiss
     
@@ -319,30 +317,24 @@ struct PKCanvasViewWrapperWithToolPicker: UIViewRepresentable {
         canvasView.tool = defaultTool
         
         // Set up PKToolPicker - create new instance instead of using deprecated shared(for:)
-        if let window = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .flatMap({ $0.windows })
-            .first(where: { $0.isKeyWindow }) {
-            
-            let toolPicker = PKToolPicker()
-            
-            // Set the tool picker's selected tool to black pen
+        let toolPicker = PKToolPicker()
+        
+        // Set the tool picker's selected tool to black pen
+        toolPicker.selectedTool = defaultTool
+        
+        toolPicker.addObserver(canvasView)
+        toolPicker.setVisible(true, forFirstResponder: canvasView)
+        
+        // Store tool picker in coordinator
+        context.coordinator.toolPicker = toolPicker
+        context.coordinator.defaultTool = defaultTool
+        
+        // Make canvas first responder to show tool picker
+        DispatchQueue.main.async {
+            canvasView.becomeFirstResponder()
+            // Ensure tool is still set after becoming first responder
+            canvasView.tool = defaultTool
             toolPicker.selectedTool = defaultTool
-            
-            toolPicker.addObserver(canvasView)
-            toolPicker.setVisible(true, forFirstResponder: canvasView)
-            
-            // Store tool picker in coordinator
-            context.coordinator.toolPicker = toolPicker
-            context.coordinator.defaultTool = defaultTool
-            
-            // Make canvas first responder to show tool picker
-            DispatchQueue.main.async {
-                canvasView.becomeFirstResponder()
-                // Ensure tool is still set after becoming first responder
-                canvasView.tool = defaultTool
-                toolPicker.selectedTool = defaultTool
-            }
         }
         
         return canvasView
