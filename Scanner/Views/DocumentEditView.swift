@@ -25,12 +25,9 @@ struct DocumentEditView: View {
         case crop = "Crop"
         case filters = "Filters"
         case adjust = "Adjust"
-        case removeBG = "Remove BG"
         case sign = "Sign"
         case watermark = "Watermark"
         case annotate = "Annotate"
-        case redact = "Redact"
-        case autoEnhance = "Auto"
         
         var id: String { rawValue }
         
@@ -39,12 +36,9 @@ struct DocumentEditView: View {
             case .crop: return "crop"
             case .filters: return "camera.filters"
             case .adjust: return "slider.horizontal.3"
-            case .removeBG: return "eye.slash"
             case .sign: return "signature"
             case .watermark: return "textformat"
             case .annotate: return "text.bubble"
-            case .redact: return "eye.slash.fill"
-            case .autoEnhance: return "sparkles"
             }
         }
     }
@@ -131,7 +125,7 @@ struct DocumentEditView: View {
             
             Spacer()
             
-            Text("Edit Photo")
+            Text("Edit Document")
                 .font(.headline)
                 .foregroundColor(.white)
             
@@ -236,11 +230,7 @@ struct DocumentEditView: View {
     
     private func toolButton(tool: EditTool) -> some View {
         Button(action: {
-            if tool == .autoEnhance {
-                applyAutoEnhance()
-            } else {
-                showingToolView = tool
-            }
+            showingToolView = tool
         }) {
             VStack(spacing: 8) {
                 Image(systemName: tool.icon)
@@ -281,29 +271,18 @@ struct DocumentEditView: View {
                 FiltersView(image: currentImage, editedImage: binding)
             case .adjust:
                 AdjustView(image: currentImage, editedImage: binding)
-            case .removeBG:
-                RemoveBGView(image: currentImage, editedImage: binding)
             case .sign:
                 SignView(image: currentImage, editedImage: binding)
             case .watermark:
                 WatermarkView(image: currentImage, editedImage: binding)
             case .annotate:
                 AnnotateView(image: currentImage, editedImage: binding)
-            case .redact:
-                RedactView(image: currentImage, editedImage: binding)
-            case .autoEnhance:
-                EmptyView()
             }
         } else {
             EmptyView()
         }
     }
     
-    // MARK: - Actions
-    
-    private func applyAutoEnhance() {
-        // TODO: Implement auto enhance
-    }
 }
 
 #Preview {

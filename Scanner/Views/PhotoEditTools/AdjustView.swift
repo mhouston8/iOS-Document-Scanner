@@ -6,15 +6,17 @@
 //
 
 import SwiftUI
+import CoreImage
+import CoreImage.CIFilterBuiltins
 
 struct AdjustView: View {
     let image: UIImage
     @Binding var editedImage: UIImage?
     @Environment(\.dismiss) private var dismiss
     
-    @State private var brightness: Double = 0.5
-    @State private var contrast: Double = 0.5
-    @State private var saturation: Double = 0.5
+    @State private var brightness: Double = 0.5 // 0-1 maps to -1.0 to 1.0
+    @State private var contrast: Double = 0.5 // 0-1 maps to 0.0 to 2.0
+    @State private var saturation: Double = 0.5 // 0-1 maps to 0.0 to 2.0
     @State private var currentImage: UIImage
     @State private var showingBeforeAfter = false
     
@@ -38,6 +40,10 @@ struct AdjustView: View {
                 // Bottom Controls
                 bottomControls
             }
+        }
+        .onAppear {
+            // Initialize preview with original image (no adjustments at default values)
+            updatePreview()
         }
     }
     
@@ -132,9 +138,12 @@ struct AdjustView: View {
                 
                 Spacer()
                 
-                Text("\(Int(value.wrappedValue * 100))%")
+                // Show percentage relative to center (0%)
+                let percentage = Int((value.wrappedValue - 0.5) * 200)
+                Text(percentage >= 0 ? "+\(percentage)%" : "\(percentage)%")
                     .font(.caption)
                     .foregroundColor(.gray)
+                    .frame(width: 50, alignment: .trailing)
             }
             
             Slider(value: value, in: 0...1)
@@ -148,15 +157,42 @@ struct AdjustView: View {
     // MARK: - Actions
     
     private func updatePreview() {
-        // TODO: Apply adjustments to image
-        // For now, just update the current image
         currentImage = applyAdjustmentsToImage(image)
     }
     
-    private func applyAdjustmentsToImage(_ image: UIImage) -> UIImage {
-        // TODO: Apply brightness, contrast, saturation
-        // For now, return original
-        return image
+    private func applyAdjustmentsToImage(_ inputImage: UIImage) -> UIImage {
+        guard let ciImage = CIImage(image: inputImage) else {
+            return inputImage
+        }
+        
+        // Map slider values (0-1) to filter values
+        // Brightness: 0 -> -1.0, 0.5 -> 0.0, 1.0 -> 1.0
+        let brightnessValue = (brightness - 0.5) * 2.0
+        
+        // Contrast: 0 -> 0.0, 0.5 -> 1.0, 1.0 -> 2.0
+        let contrastValue = contrast * 2.0
+        
+        // Saturation: 0 -> 0.0, 0.5 -> 1.0, 1.0 -> 2.0
+        let saturationValue = saturation * 2.0
+        
+        // Apply CIColorControls filter
+        let filter = CIFilter.colorControls()
+        filter.inputImage = ciImage
+        filter.brightness = Float(brightnessValue)
+        filter.contrast = Float(contrastValue)
+        filter.saturation = Float(saturationValue)
+        
+        guard let outputImage = filter.outputImage else {
+            return inputImage
+        }
+        
+        // Render the filtered image
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(outputImage, from: outputImage.extent) else {
+            return inputImage
+        }
+        
+        return UIImage(cgImage: cgImage, scale: inputImage.scale, orientation: inputImage.imageOrientation)
     }
     
     private func applyAdjustments() {
