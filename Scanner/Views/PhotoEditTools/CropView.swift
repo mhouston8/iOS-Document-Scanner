@@ -13,17 +13,57 @@ struct CropView: View {
     @Binding var editedImage: UIImage?
     @Environment(\.dismiss) private var dismiss
     
+    @State private var cropViewController: CropViewController?
+    
     var body: some View {
-        CropViewControllerWrapper(
-            image: image,
-            onCrop: { croppedImage in
-                editedImage = croppedImage
-                dismiss()
-            },
-            onCancel: {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Top Bar
+                topBar
+                
+                // Crop View Controller
+                CropViewControllerWrapper(
+                    image: image,
+                    cropViewController: $cropViewController,
+                    onCrop: { croppedImage in
+                        editedImage = croppedImage
+                        dismiss()
+                    },
+                    onCancel: {
+                        dismiss()
+                    }
+                )
+            }
+        }
+    }
+    
+    // MARK: - Top Bar
+    
+    private var topBar: some View {
+        HStack {
+            Button("Cancel") {
                 dismiss()
             }
-        )
+            .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text("Crop")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Button("Apply") {
+                cropViewController?.crop()
+            }
+            .foregroundColor(.blue)
+            .fontWeight(.semibold)
+        }
+        .padding()
+        .background(Color.black.opacity(0.5))
     }
 }
 
@@ -31,17 +71,29 @@ struct CropView: View {
 
 struct CropViewControllerWrapper: UIViewControllerRepresentable {
     let image: UIImage
+    @Binding var cropViewController: CropViewController?
     let onCrop: (UIImage) -> Void
     let onCancel: () -> Void
     
     func makeUIViewController(context: Context) -> CropViewController {
         let cropViewController = Mantis.cropViewController(image: image)
         cropViewController.delegate = context.coordinator
+        
+        // Store reference for Apply button
+        DispatchQueue.main.async {
+            self.cropViewController = cropViewController
+        }
+        
         return cropViewController
     }
     
     func updateUIViewController(_ uiViewController: CropViewController, context: Context) {
-        // No updates needed
+        // Update reference if needed
+        if cropViewController != uiViewController {
+            DispatchQueue.main.async {
+                self.cropViewController = uiViewController
+            }
+        }
     }
     
     func makeCoordinator() -> Coordinator {
