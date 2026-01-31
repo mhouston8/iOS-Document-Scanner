@@ -17,6 +17,8 @@ struct FiltersView: View {
     @State private var selectedFilter: Filter? = nil
     @State private var filterIntensity: Double = 1.0
     @State private var currentImage: UIImage
+    @State private var filterPreviews: [Filter: UIImage] = [:]
+    @State private var isLoadingPreviews = false
     
     enum Filter: String, CaseIterable {
         case original = "Original"
@@ -49,6 +51,9 @@ struct FiltersView: View {
                 // Bottom Controls
                 bottomControls
             }
+        }
+        .onAppear {
+            loadFilterPreviews()
         }
     }
     
@@ -135,21 +140,65 @@ struct FiltersView: View {
             }
         }) {
             VStack(spacing: 8) {
-                // Filter preview thumbnail
-                Image(uiImage: applyFilterToImage(image, filter: filter, intensity: 1.0))
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 70, height: 70)
-                    .clipped()
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(selectedFilter == filter ? Color.blue : Color.clear, lineWidth: 3)
-                    )
+                // Filter preview thumbnail - use cached preview or show placeholder
+                Group {
+                    if let preview = filterPreviews[filter] {
+                        Image(uiImage: preview)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        // Show original image as placeholder while loading
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .opacity(0.5)
+                            .overlay(
+                                ProgressView()
+                                    .tint(.white)
+                            )
+                    }
+                }
+                .frame(width: 70, height: 70)
+                .clipped()
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(selectedFilter == filter ? Color.blue : Color.clear, lineWidth: 3)
+                )
                 
                 Text(filter.rawValue)
                     .font(.caption)
                     .foregroundColor(selectedFilter == filter ? .blue : .white)
+            }
+        }
+    }
+    
+    // MARK: - Preview Loading
+    
+    private func loadFilterPreviews() {
+        guard !isLoadingPreviews else { return }
+        isLoadingPreviews = true
+        
+        // Create smaller thumbnail for previews to speed up processing
+        let thumbnailSize = CGSize(width: 140, height: 140) // 2x the display size for retina
+        let thumbnailImage = image.resized(to: thumbnailSize)
+        
+        Task {
+            var previews: [Filter: UIImage] = [:]
+            
+            // Process filters in background
+            for filter in Filter.allCases {
+                if filter == .original {
+                    previews[filter] = thumbnailImage
+                } else {
+                    let preview = applyFilterToImage(thumbnailImage, filter: filter, intensity: 1.0)
+                    previews[filter] = preview
+                }
+            }
+            
+            await MainActor.run {
+                filterPreviews = previews
+                isLoadingPreviews = false
             }
         }
     }
@@ -273,6 +322,17 @@ struct FiltersView: View {
     private func applyFilter() {
         editedImage = currentImage
         dismiss()
+    }
+}
+
+// MARK: - UIImage Extension for Resizing
+
+extension UIImage {
+    func resized(to size: CGSize) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { _ in
+            self.draw(in: CGRect(origin: .zero, size: size))
+        }
     }
 }
 

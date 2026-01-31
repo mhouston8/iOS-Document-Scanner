@@ -85,7 +85,7 @@ struct SignView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Display all signatures as draggable overlays
+                // Display all signatures as draggable and resizable overlays
                 ForEach(signatures) { signature in
                     SignatureOverlayView(
                         signature: signature,
@@ -93,6 +93,11 @@ struct SignView: View {
                         onDrag: { newPosition in
                             if let index = signatures.firstIndex(where: { $0.id == signature.id }) {
                                 signatures[index].position = newPosition
+                            }
+                        },
+                        onResize: { newSize in
+                            if let index = signatures.firstIndex(where: { $0.id == signature.id }) {
+                                signatures[index].size = newSize
                             }
                         },
                         onTap: {
@@ -120,17 +125,68 @@ struct SignView: View {
                 canvasView.drawing = PKDrawing()
                 showingSignaturePad = true
             }) {
-                HStack {
-                    Image(systemName: "signature")
-                        .font(.system(size: 20))
-                    Text("Add Signature")
-                        .font(.headline)
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.blue.opacity(0.8), Color.cyan.opacity(0.6)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: "signature")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Add Signature")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Text("Draw your signature")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.6))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue.opacity(0.3))
-                .cornerRadius(12)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.blue.opacity(0.2),
+                                    Color.cyan.opacity(0.15)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.blue.opacity(0.4),
+                                            Color.cyan.opacity(0.3)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
             }
             .padding(.horizontal, 20)
             
@@ -370,36 +426,89 @@ struct SignatureOverlayView: View {
     let signature: SignView.Signature
     let isSelected: Bool
     let onDrag: (CGPoint) -> Void
+    let onResize: (CGSize) -> Void
     let onTap: () -> Void
     
     @State private var dragOffset: CGSize = .zero
+    @State private var currentSize: CGSize
+    @State private var resizeStartSize: CGSize = .zero
+    @State private var resizeStartLocation: CGPoint = .zero
+    
+    init(signature: SignView.Signature, isSelected: Bool, onDrag: @escaping (CGPoint) -> Void, onResize: @escaping (CGSize) -> Void, onTap: @escaping () -> Void) {
+        self.signature = signature
+        self.isSelected = isSelected
+        self.onDrag = onDrag
+        self.onResize = onResize
+        self.onTap = onTap
+        _currentSize = State(initialValue: signature.size)
+    }
     
     var body: some View {
         let signatureImage = signature.drawing.image(from: signature.drawing.bounds, scale: 1.0)
+        let handleSize: CGFloat = 20
+        let minSize: CGFloat = 50
         
-        Image(uiImage: signatureImage)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: signature.size.width, height: signature.size.height)
-            .border(isSelected ? Color.blue : Color.clear, width: 2)
-            .offset(dragOffset)
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        let newPosition = CGPoint(
-                            x: signature.position.x + value.translation.width,
-                            y: signature.position.y + value.translation.height
-                        )
-                        onDrag(newPosition)
-                        dragOffset = .zero
-                    }
-            )
-            .onTapGesture {
-                onTap()
+        ZStack {
+            Image(uiImage: signatureImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: currentSize.width, height: currentSize.height)
+                .border(isSelected ? Color.blue : Color.clear, width: 2)
+                .offset(dragOffset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            dragOffset = value.translation
+                        }
+                        .onEnded { value in
+                            let newPosition = CGPoint(
+                                x: signature.position.x + value.translation.width,
+                                y: signature.position.y + value.translation.height
+                            )
+                            onDrag(newPosition)
+                            dragOffset = .zero
+                        }
+                )
+                .onTapGesture {
+                    onTap()
+                }
+            
+            // Resize handles (only show when selected)
+            if isSelected {
+                // Bottom-right resize handle
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: handleSize, height: handleSize)
+                    .offset(
+                        x: currentSize.width / 2 - handleSize / 2,
+                        y: currentSize.height / 2 - handleSize / 2
+                    )
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if resizeStartSize == .zero {
+                                    resizeStartSize = currentSize
+                                    resizeStartLocation = value.startLocation
+                                }
+                                
+                                let deltaX = value.translation.width
+                                let deltaY = value.translation.height
+                                
+                                let newWidth = max(minSize, resizeStartSize.width + deltaX * 2)
+                                let newHeight = max(minSize, resizeStartSize.height + deltaY * 2)
+                                
+                                currentSize = CGSize(width: newWidth, height: newHeight)
+                            }
+                            .onEnded { _ in
+                                onResize(currentSize)
+                                resizeStartSize = .zero
+                            }
+                    )
             }
+        }
+        .onChange(of: signature.size) { oldValue, newValue in
+            currentSize = newValue
+        }
     }
 }
 
