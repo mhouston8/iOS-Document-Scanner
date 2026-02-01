@@ -34,7 +34,7 @@ struct DocumentToolsView: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $showingDocumentSelection) {
                 if let toolTitle = selectedToolTitle {
-                    ToolDocumentSelectionView(selectedToolTitle: toolTitle, authService: authService)
+                    DocumentSelectionViaToolView(selectedToolTitle: toolTitle, authService: authService)
                         .environmentObject(authService)
                 }
             }

@@ -1,5 +1,5 @@
 //
-//  ToolDocumentSelectionView.swift
+//  DocumentSelectionViaToolView.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ToolDocumentSelectionView: View {
+struct DocumentSelectionViaToolView: View {
     @EnvironmentObject var authService: AuthenticationService
     let selectedToolTitle: String
     @Environment(\.dismiss) private var dismiss
@@ -172,7 +172,7 @@ private struct DocumentRowView: View {
 }
 
 #Preview {
-    ToolDocumentSelectionView(
+    DocumentSelectionViaToolView(
         selectedToolTitle: "Edit",
         authService: AuthenticationService()
     )
