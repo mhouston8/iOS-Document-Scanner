@@ -1,5 +1,5 @@
 //
-//  FilesView.swift
+//  DocumentsView.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -7,23 +7,23 @@
 
 import SwiftUI
 
-struct FilesView: View {
+struct DocumentsView: View {
     @EnvironmentObject var authService: AuthenticationService
     
     var body: some View {
-        FilesViewContent(authService: authService)
+        DocumentsViewContent(authService: authService)
     }
 }
 
-private struct FilesViewContent: View {
+private struct DocumentsViewContent: View {
     let authService: AuthenticationService
-    @StateObject private var viewModel: FilesViewModel
+    @StateObject private var viewModel: DocumentsViewModel
     @State private var editingDocument: Document? = nil
     
     init(authService: AuthenticationService) {
         self.authService = authService
         let databaseService = DatabaseService(client: SupabaseDatabaseClient())
-        _viewModel = StateObject(wrappedValue: FilesViewModel(
+        _viewModel = StateObject(wrappedValue: DocumentsViewModel(
             databaseService: databaseService,
             authService: authService
         ))
@@ -69,7 +69,7 @@ private struct FilesViewContent: View {
                     }
                 }
             }
-            .navigationTitle("Files")
+            .navigationTitle("Documents")
             .refreshable {
                 viewModel.loadDocuments()
             }
@@ -175,6 +175,6 @@ private struct DocumentRowView: View {
 }
 
 #Preview {
-    FilesView()
+    DocumentsView()
         .environmentObject(AuthenticationService())
 }

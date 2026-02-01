@@ -10,11 +10,9 @@ import SwiftUI
 struct ActionsView: View {
     var body: some View {
         NavigationStack {
-            VStack {
-                Text("Actions")
-                    .font(.largeTitle)
-            }
-            .navigationTitle("Actions")
+            AllActionsView()
+                .navigationTitle("Document Tools")
+                .navigationBarTitleDisplayMode(.large)
         }
     }
 }

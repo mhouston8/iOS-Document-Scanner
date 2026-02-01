@@ -1,5 +1,5 @@
 //
-//  FilesViewModel.swift
+//  DocumentsViewModel.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -22,7 +22,7 @@ struct DocumentWithThumbnail: Identifiable {
 }
 
 @MainActor
-class FilesViewModel: ObservableObject {
+class DocumentsViewModel: ObservableObject {
     @Published var documents: [DocumentWithThumbnail] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -66,7 +66,7 @@ class FilesViewModel: ObservableObject {
                         documentsWithThumbnails.append(docWithThumbnail)
                     } catch {
                         // If fetching thumbnail fails, still add document without thumbnail
-                        print("WARNING [FilesViewModel]: Failed to fetch thumbnail for document \(document.id): \(error)")
+                        print("WARNING [DocumentsViewModel]: Failed to fetch thumbnail for document \(document.id): \(error)")
                         let docWithThumbnail = DocumentWithThumbnail(
                             document: document,
                             thumbnailUrl: nil
@@ -79,7 +79,7 @@ class FilesViewModel: ObservableObject {
                 print("Loaded \(documents.count) documents")
             } catch {
                 errorMessage = "Failed to load documents: \(error.localizedDescription)"
-                print("ERROR [FilesViewModel]: \(error.localizedDescription)")
+                print("ERROR [DocumentsViewModel]: \(error.localizedDescription)")
             }
             
             isLoading = false

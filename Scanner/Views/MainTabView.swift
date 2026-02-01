@@ -33,9 +33,9 @@ private struct MainTabViewContent: View {
                     }
                     .tag(0)
                 
-                FilesView()
+                DocumentsView()
                     .tabItem {
-                        Label("Files", systemImage: "folder.fill")
+                        Label("Docs", systemImage: "folder.fill")
                     }
                     .tag(1)
                 

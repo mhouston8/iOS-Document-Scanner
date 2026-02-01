@@ -11,21 +11,24 @@ import SwiftUI
 // This view shows all available actions organized by category
 struct AllActionsView: View {
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-            // Header
-            headerSection
-            
-            // Categorized Actions
-                scanAndImportSection
-                pdfToolsSection
-                editAndEnhanceSection
-                signAndMarkSection
-                organizeSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                // Header
+                headerSection
+                
+                // Categorized Actions
+                    scanAndImportSection
+                    pdfToolsSection
+                    editAndEnhanceSection
+                    signAndMarkSection
+                    organizeSection
+                }
+                .padding()
             }
-            .padding()
+            .navigationTitle("Document Tools")
+            .navigationBarTitleDisplayMode(.large)
         }
-        .navigationTitle("Document Tools")
     }
     
     // MARK: - Header
