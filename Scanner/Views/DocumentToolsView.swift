@@ -10,6 +10,10 @@ import SwiftUI
 // Document Tools View: Categorized Grid - All categories visible, organized sections
 // This view shows all available document tools organized by category
 struct DocumentToolsView: View {
+    @EnvironmentObject var authService: AuthenticationService
+    @State private var selectedTool: String?
+    @State private var showingDocumentSelection = false
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -28,6 +32,12 @@ struct DocumentToolsView: View {
             }
             .navigationTitle("Document Tools")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: $showingDocumentSelection) {
+                if let tool = selectedTool {
+                    ToolDocumentSelectionView(toolTitle: tool, authService: authService)
+                        .environmentObject(authService)
+                }
+            }
         }
     }
     
@@ -136,7 +146,7 @@ struct DocumentToolsView: View {
     
     private func actionButton(action: ActionItem) -> some View {
         Button(action: {
-            // TODO: Handle action
+            handleAction(action)
         }) {
             VStack(spacing: 8) {
                 Image(systemName: action.icon)
@@ -156,6 +166,26 @@ struct DocumentToolsView: View {
             .cornerRadius(10)
         }
         .buttonStyle(.plain)
+    }
+    
+    // MARK: - Action Handling
+    
+    private func handleAction(_ action: ActionItem) {
+        // Actions that require document selection
+        let documentRequiredActions = [
+            "Edit", "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
+            "Sign", "Watermark", "Annotate", "Redact",
+            "Merge", "Split PDF", "Export PDF", "Compress"
+        ]
+        
+        if documentRequiredActions.contains(action.title) {
+            selectedTool = action.title
+            showingDocumentSelection = true
+        } else {
+            // Handle actions that don't require documents (Scan, Import, New Folder, etc.)
+            // TODO: Implement these actions
+            print("Action '\(action.title)' tapped - not yet implemented")
+        }
     }
 }
 
