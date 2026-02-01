@@ -47,6 +47,8 @@ private struct HomeViewContent: View {
             case .edit:
                 return [
                     ActionItem(icon: "pencil", title: "Edit", color: .blue),
+                    ActionItem(icon: "crop", title: "Crop", color: .green),
+                    ActionItem(icon: "rotate.left", title: "Rotate", color: .orange),
                     ActionItem(icon: "camera.filters", title: "Filters", color: .purple),
                     ActionItem(icon: "sun.max", title: "Adjust", color: .yellow),
                     ActionItem(icon: "eye.slash", title: "Remove BG", color: .red)
