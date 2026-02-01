@@ -9,14 +9,14 @@ import SwiftUI
 
 struct ToolDocumentSelectionView: View {
     @EnvironmentObject var authService: AuthenticationService
-    let toolTitle: String
+    let selectedToolTitle: String
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var viewModel: DocumentsViewModel
     @State private var selectedDocument: Document?
     
-    init(toolTitle: String, authService: AuthenticationService) {
-        self.toolTitle = toolTitle
+    init(selectedToolTitle: String, authService: AuthenticationService) {
+        self.selectedToolTitle = selectedToolTitle
         let databaseService = DatabaseService(client: SupabaseDatabaseClient())
         _viewModel = StateObject(wrappedValue: DocumentsViewModel(
             databaseService: databaseService,
@@ -78,7 +78,7 @@ struct ToolDocumentSelectionView: View {
                 // TODO: Open specific tool view with selected document
                 // For now, just store the selection
                 if let document = newValue {
-                    print("Selected document: \(document.name) for tool: \(toolTitle)")
+                    print("Selected document: \(document.name) for tool: \(selectedToolTitle)")
                 }
             }
         }
@@ -173,7 +173,7 @@ private struct DocumentRowView: View {
 
 #Preview {
     ToolDocumentSelectionView(
-        toolTitle: "Edit",
+        selectedToolTitle: "Edit",
         authService: AuthenticationService()
     )
     .environmentObject(AuthenticationService())

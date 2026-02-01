@@ -11,7 +11,7 @@ import SwiftUI
 // This view shows all available document tools organized by category
 struct DocumentToolsView: View {
     @EnvironmentObject var authService: AuthenticationService
-    @State private var selectedTool: String?
+    @State private var selectedToolTitle: String?
     @State private var showingDocumentSelection = false
     
     var body: some View {
@@ -33,8 +33,8 @@ struct DocumentToolsView: View {
             .navigationTitle("Document Tools")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $showingDocumentSelection) {
-                if let tool = selectedTool {
-                    ToolDocumentSelectionView(toolTitle: tool, authService: authService)
+                if let toolTitle = selectedToolTitle {
+                    ToolDocumentSelectionView(selectedToolTitle: toolTitle, authService: authService)
                         .environmentObject(authService)
                 }
             }
@@ -179,7 +179,7 @@ struct DocumentToolsView: View {
         ]
         
         if documentRequiredActions.contains(action.title) {
-            selectedTool = action.title
+            selectedToolTitle = action.title
             showingDocumentSelection = true
         } else {
             // Handle actions that don't require documents (Scan, Import, New Folder, etc.)
