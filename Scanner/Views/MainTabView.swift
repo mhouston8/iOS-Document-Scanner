@@ -46,9 +46,9 @@ private struct MainTabViewContent: View {
                     }
                     .tag(2)
                 
-                AllActionsView()
+                DocumentToolsView()
                     .tabItem {
-                        Label("Actions", systemImage: "square.stack.3d.up.fill")
+                        Label("Tools", systemImage: "square.stack.3d.up.fill")
                     }
                     .tag(3)
                 

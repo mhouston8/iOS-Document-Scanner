@@ -195,7 +195,7 @@ private struct HomeViewContent: View {
                 }
                 
                 // "All" button as last card
-                NavigationLink(destination: AllActionsView()) {
+                NavigationLink(destination: DocumentToolsView()) {
                     allButton
                 }
                 .buttonStyle(.plain)

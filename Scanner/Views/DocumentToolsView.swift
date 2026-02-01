@@ -1,5 +1,5 @@
 //
-//  AllActionsView.swift
+//  DocumentToolsView.swift
 //  Scanner
 //
 //  Created by Matthew Houston on 12/28/25.
@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-// All Actions View: Categorized Grid - All categories visible, organized sections
-// This view shows all available actions organized by category
-struct AllActionsView: View {
+// Document Tools View: Categorized Grid - All categories visible, organized sections
+// This view shows all available document tools organized by category
+struct DocumentToolsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -170,6 +170,6 @@ struct ActionItem: Identifiable {
 
 #Preview {
     NavigationStack {
-        AllActionsView()
+        DocumentToolsView()
     }
 }
