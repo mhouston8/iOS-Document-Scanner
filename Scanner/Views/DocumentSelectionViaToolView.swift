@@ -14,12 +14,16 @@ struct DocumentSelectionViaToolView: View {
     
     @StateObject private var viewModel: DocumentsViewModel
     @State private var selectedDocument: Document?
+    @State private var showingPageSelection = false
+    
+    private let databaseService: DatabaseService
     
     init(selectedToolTitle: String, authService: AuthenticationService) {
         self.selectedToolTitle = selectedToolTitle
-        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+        let dbService = DatabaseService(client: SupabaseDatabaseClient())
+        self.databaseService = dbService
         _viewModel = StateObject(wrappedValue: DocumentsViewModel(
-            databaseService: databaseService,
+            databaseService: dbService,
             authService: authService
         ))
     }
@@ -75,10 +79,24 @@ struct DocumentSelectionViaToolView: View {
                 }
             }
             .onChange(of: selectedDocument) { oldValue, newValue in
-                // TODO: Open specific tool view with selected document
-                // For now, just store the selection
-                if let document = newValue {
-                    print("Selected document: \(document.name) for tool: \(selectedToolTitle)")
+                guard let document = newValue else { return }
+                
+                // If multi-page document, show page selection
+                if document.pageCount > 1 {
+                    showingPageSelection = true
+                } else {
+                    // Single page document - TODO: Open tool view directly
+                    print("Selected single-page document: \(document.name) for tool: \(selectedToolTitle)")
+                }
+            }
+            .navigationDestination(isPresented: $showingPageSelection) {
+                if let document = selectedDocument {
+                    DocumentPageSelectionView(
+                        document: document,
+                        toolTitle: selectedToolTitle,
+                        databaseService: databaseService
+                    )
+                    .environmentObject(authService)
                 }
             }
         }
