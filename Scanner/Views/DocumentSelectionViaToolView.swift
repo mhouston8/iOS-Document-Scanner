@@ -19,6 +19,9 @@ struct DocumentSelectionViaToolView: View {
     @State private var showingCropView = false
     @State private var cropImage: UIImage?
     @State private var cropPage: DocumentPage?
+    @State private var showingFiltersView = false
+    @State private var filterImage: UIImage?
+    @State private var filterPage: DocumentPage?
     @State private var isLoadingImage = false
     
     private let databaseService: DatabaseService
@@ -93,6 +96,8 @@ struct DocumentSelectionViaToolView: View {
                     // Single page document - load first page and open tool view
                     if selectedToolTitle == "Crop" {
                         loadFirstPageForCrop(document: document)
+                    } else if selectedToolTitle == "Filters" {
+                        loadFirstPageForFilters(document: document)
                     } else {
                         // TODO: Handle other tools
                         print("Selected single-page document: \(document.name) for tool: \(selectedToolTitle)")
@@ -130,6 +135,21 @@ struct DocumentSelectionViaToolView: View {
                             set: { newImage in
                                 if let newImage = newImage {
                                     saveCroppedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingFiltersView) {
+                if let image = filterImage {
+                    FiltersView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.filterImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveFilteredImage(newImage)
                                 }
                             }
                         )
@@ -214,6 +234,85 @@ struct DocumentSelectionViaToolView: View {
                 }
             } catch {
                 print("ERROR [DocumentSelectionViaToolView]: Failed to save cropped image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Filters Handling
+    
+    private func loadFirstPageForFilters(document: Document) {
+        Task {
+            isLoadingImage = true
+            do {
+                // Load pages for the document
+                let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
+                guard let firstPage = pages.sorted(by: { $0.pageNumber < $1.pageNumber }).first else {
+                    print("ERROR [DocumentSelectionViaToolView]: No pages found for document")
+                    isLoadingImage = false
+                    return
+                }
+                
+                // Load the image
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: firstPage.imageUrl) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    filterImage = image
+                    filterPage = firstPage
+                    showingFiltersView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to load page: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveFilteredImage(_ filteredImage: UIImage) {
+        guard let page = filterPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: filteredImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                if let document = selectedDocument {
+                    var updatedDocument = document
+                    updatedDocument.updatedAt = Date()
+                    try await databaseService.updateDocumentInDatabase(updatedDocument)
+                }
+                
+                await MainActor.run {
+                    showingFiltersView = false
+                    filterImage = nil
+                    filterPage = nil
+                    selectedDocument = nil
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to save filtered image: \(error.localizedDescription)")
             }
         }
     }
