@@ -26,6 +26,15 @@ struct DocumentPageSelectionView: View {
     @State private var showingFiltersView = false
     @State private var filterImage: UIImage?
     @State private var filterPage: DocumentPage?
+    @State private var showingWatermarkView = false
+    @State private var watermarkImage: UIImage?
+    @State private var watermarkPage: DocumentPage?
+    @State private var showingSignView = false
+    @State private var signImage: UIImage?
+    @State private var signPage: DocumentPage?
+    @State private var showingAnnotateView = false
+    @State private var annotateImage: UIImage?
+    @State private var annotatePage: DocumentPage?
     @State private var isLoadingImage = false
     
     init(document: Document, toolTitle: String, databaseService: DatabaseService) {
@@ -131,6 +140,51 @@ struct DocumentPageSelectionView: View {
                             set: { newImage in
                                 if let newImage = newImage {
                                     saveFilteredImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingWatermarkView) {
+                if let image = watermarkImage {
+                    WatermarkView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.watermarkImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveWatermarkedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingSignView) {
+                if let image = signImage {
+                    SignView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.signImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveSignedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingAnnotateView) {
+                if let image = annotateImage {
+                    AnnotateView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.annotateImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveAnnotatedImage(newImage)
                                 }
                             }
                         )
@@ -261,6 +315,12 @@ struct DocumentPageSelectionView: View {
                 loadPageImageForCrop(page: selectedPage)
             } else if toolTitle == "Filters" {
                 loadPageImageForFilters(page: selectedPage)
+            } else if toolTitle == "Watermark" {
+                loadPageImageForWatermark(page: selectedPage)
+            } else if toolTitle == "Sign" {
+                loadPageImageForSign(page: selectedPage)
+            } else if toolTitle == "Annotate" {
+                loadPageImageForAnnotate(page: selectedPage)
             } else {
                 // TODO: Handle other tools
                 print("Selected page \(selectedPage.pageNumber) for tool: \(toolTitle)")
@@ -408,6 +468,210 @@ struct DocumentPageSelectionView: View {
                 }
             } catch {
                 print("ERROR [DocumentPageSelectionView]: Failed to save filtered image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Watermark Handling
+    
+    private func loadPageImageForWatermark(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    watermarkImage = image
+                    watermarkPage = page
+                    showingWatermarkView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveWatermarkedImage(_ watermarkedImage: UIImage) {
+        guard let page = watermarkPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: watermarkedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingWatermarkView = false
+                    watermarkImage = nil
+                    watermarkPage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save watermarked image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Sign Handling
+    
+    private func loadPageImageForSign(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    signImage = image
+                    signPage = page
+                    showingSignView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveSignedImage(_ signedImage: UIImage) {
+        guard let page = signPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: signedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingSignView = false
+                    signImage = nil
+                    signPage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save signed image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Annotate Handling
+    
+    private func loadPageImageForAnnotate(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    annotateImage = image
+                    annotatePage = page
+                    showingAnnotateView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveAnnotatedImage(_ annotatedImage: UIImage) {
+        guard let page = annotatePage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: annotatedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingAnnotateView = false
+                    annotateImage = nil
+                    annotatePage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save annotated image: \(error.localizedDescription)")
             }
         }
     }

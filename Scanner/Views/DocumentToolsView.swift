@@ -87,7 +87,6 @@ struct DocumentToolsView: View {
         categorySection(
             title: "Edit & Enhance",
             actions: [
-                ActionItem(icon: "pencil", title: "Edit", color: .blue),
                 ActionItem(icon: "crop", title: "Crop", color: .green),
                 ActionItem(icon: "rotate.left", title: "Rotate", color: .orange),
                 ActionItem(icon: "camera.filters", title: "Filters", color: .purple),
@@ -188,7 +187,7 @@ struct DocumentToolsView: View {
     private func handleAction(_ action: ActionItem) {
         // Actions that require document selection
         let documentRequiredActions = [
-            "Edit", "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
+            "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate", "Redact",
             "Merge", "Split PDF", "Export PDF", "Compress",
             "To Word", "To Excel", "To Text", "To Image"
