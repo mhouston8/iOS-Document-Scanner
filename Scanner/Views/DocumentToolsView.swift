@@ -26,6 +26,7 @@ struct DocumentToolsView: View {
                     pdfToolsSection
                     editAndEnhanceSection
                     signAndMarkSection
+                    convertSection
                     organizeSection
                 }
                 .padding()
@@ -110,6 +111,20 @@ struct DocumentToolsView: View {
         )
     }
     
+    // MARK: - Convert Section
+    
+    private var convertSection: some View {
+        categorySection(
+            title: "Convert",
+            actions: [
+                ActionItem(icon: "doc.richtext", title: "To Word", color: .blue),
+                ActionItem(icon: "tablecells", title: "To Excel", color: .green),
+                ActionItem(icon: "text.alignleft", title: "To Text", color: .gray),
+                ActionItem(icon: "photo", title: "To Image", color: .purple)
+            ]
+        )
+    }
+    
     // MARK: - Organize Section
     
     private var organizeSection: some View {
@@ -175,7 +190,8 @@ struct DocumentToolsView: View {
         let documentRequiredActions = [
             "Edit", "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate", "Redact",
-            "Merge", "Split PDF", "Export PDF", "Compress"
+            "Merge", "Split PDF", "Export PDF", "Compress",
+            "To Word", "To Excel", "To Text", "To Image"
         ]
         
         if documentRequiredActions.contains(action.title) {
