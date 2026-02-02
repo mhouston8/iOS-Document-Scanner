@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct DocumentPageSelectionView: View {
     @EnvironmentObject var authService: AuthenticationService
@@ -19,6 +20,10 @@ struct DocumentPageSelectionView: View {
     @State private var selectedPageIndex: Int?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showingCropView = false
+    @State private var cropImage: UIImage?
+    @State private var cropPage: DocumentPage?
+    @State private var isLoadingImage = false
     
     init(document: Document, toolTitle: String, databaseService: DatabaseService) {
         self.document = document
@@ -85,6 +90,33 @@ struct DocumentPageSelectionView: View {
             .onAppear {
                 if pages.isEmpty {
                     loadPages()
+                }
+            }
+            .overlay {
+                if isLoadingImage {
+                    ZStack {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                        ProgressView("Loading image...")
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showingCropView) {
+                if let image = cropImage {
+                    CropView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.cropImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveCroppedImage(newImage)
+                                }
+                            }
+                        )
+                    )
                 }
             }
         }
@@ -201,10 +233,16 @@ struct DocumentPageSelectionView: View {
     
     private var continueButton: some View {
         Button(action: {
-            // TODO: Open specific tool view with selected page
-            if let selectedIndex = selectedPageIndex,
-               selectedIndex < pages.count {
-                let selectedPage = pages[selectedIndex]
+            guard let selectedIndex = selectedPageIndex,
+                  selectedIndex < pages.count else { return }
+            
+            let selectedPage = pages[selectedIndex]
+            
+            // Handle Crop tool
+            if toolTitle == "Crop" {
+                loadPageImageForCrop(page: selectedPage)
+            } else {
+                // TODO: Handle other tools
                 print("Selected page \(selectedPage.pageNumber) for tool: \(toolTitle)")
             }
         }) {
@@ -215,6 +253,74 @@ struct DocumentPageSelectionView: View {
                 .padding()
                 .background(Color.blue)
                 .cornerRadius(12)
+        }
+    }
+    
+    // MARK: - Crop Handling
+    
+    private func loadPageImageForCrop(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    cropImage = image
+                    cropPage = page
+                    showingCropView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveCroppedImage(_ croppedImage: UIImage) {
+        guard let page = cropPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: croppedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingCropView = false
+                    cropImage = nil
+                    cropPage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save cropped image: \(error.localizedDescription)")
+            }
         }
     }
     
