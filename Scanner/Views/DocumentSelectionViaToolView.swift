@@ -31,6 +31,9 @@ struct DocumentSelectionViaToolView: View {
     @State private var showingAnnotateView = false
     @State private var annotateImage: UIImage?
     @State private var annotatePage: DocumentPage?
+    @State private var showingAdjustView = false
+    @State private var adjustImage: UIImage?
+    @State private var adjustPage: DocumentPage?
     @State private var isLoadingImage = false
     
     private let databaseService: DatabaseService
@@ -113,6 +116,8 @@ struct DocumentSelectionViaToolView: View {
                         loadFirstPageForSign(document: document)
                     } else if selectedToolTitle == "Annotate" {
                         loadFirstPageForAnnotate(document: document)
+                    } else if selectedToolTitle == "Adjust" {
+                        loadFirstPageForAdjust(document: document)
                     } else {
                         // TODO: Handle other tools
                         print("Selected single-page document: \(document.name) for tool: \(selectedToolTitle)")
@@ -210,6 +215,21 @@ struct DocumentSelectionViaToolView: View {
                             set: { newImage in
                                 if let newImage = newImage {
                                     saveAnnotatedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingAdjustView) {
+                if let image = adjustImage {
+                    AdjustView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.adjustImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveAdjustedImage(newImage)
                                 }
                             }
                         )
@@ -610,6 +630,85 @@ struct DocumentSelectionViaToolView: View {
                 }
             } catch {
                 print("ERROR [DocumentSelectionViaToolView]: Failed to save annotated image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Adjust Handling
+    
+    private func loadFirstPageForAdjust(document: Document) {
+        Task {
+            isLoadingImage = true
+            do {
+                // Load pages for the document
+                let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
+                guard let firstPage = pages.sorted(by: { $0.pageNumber < $1.pageNumber }).first else {
+                    print("ERROR [DocumentSelectionViaToolView]: No pages found for document")
+                    isLoadingImage = false
+                    return
+                }
+                
+                // Load the image
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: firstPage.imageUrl) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    adjustImage = image
+                    adjustPage = firstPage
+                    showingAdjustView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to load page: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveAdjustedImage(_ adjustedImage: UIImage) {
+        guard let page = adjustPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: adjustedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                if let document = selectedDocument {
+                    var updatedDocument = document
+                    updatedDocument.updatedAt = Date()
+                    try await databaseService.updateDocumentInDatabase(updatedDocument)
+                }
+                
+                await MainActor.run {
+                    showingAdjustView = false
+                    adjustImage = nil
+                    adjustPage = nil
+                    selectedDocument = nil
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to save adjusted image: \(error.localizedDescription)")
             }
         }
     }

@@ -35,6 +35,9 @@ struct DocumentPageSelectionView: View {
     @State private var showingAnnotateView = false
     @State private var annotateImage: UIImage?
     @State private var annotatePage: DocumentPage?
+    @State private var showingAdjustView = false
+    @State private var adjustImage: UIImage?
+    @State private var adjustPage: DocumentPage?
     @State private var isLoadingImage = false
     
     init(document: Document, toolTitle: String, databaseService: DatabaseService) {
@@ -191,6 +194,21 @@ struct DocumentPageSelectionView: View {
                     )
                 }
             }
+            .fullScreenCover(isPresented: $showingAdjustView) {
+                if let image = adjustImage {
+                    AdjustView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.adjustImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveAdjustedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
         }
     }
     
@@ -321,6 +339,8 @@ struct DocumentPageSelectionView: View {
                 loadPageImageForSign(page: selectedPage)
             } else if toolTitle == "Annotate" {
                 loadPageImageForAnnotate(page: selectedPage)
+            } else if toolTitle == "Adjust" {
+                loadPageImageForAdjust(page: selectedPage)
             } else {
                 // TODO: Handle other tools
                 print("Selected page \(selectedPage.pageNumber) for tool: \(toolTitle)")
@@ -672,6 +692,74 @@ struct DocumentPageSelectionView: View {
                 }
             } catch {
                 print("ERROR [DocumentPageSelectionView]: Failed to save annotated image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Adjust Handling
+    
+    private func loadPageImageForAdjust(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    adjustImage = image
+                    adjustPage = page
+                    showingAdjustView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveAdjustedImage(_ adjustedImage: UIImage) {
+        guard let page = adjustPage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: adjustedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingAdjustView = false
+                    adjustImage = nil
+                    adjustPage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save adjusted image: \(error.localizedDescription)")
             }
         }
     }
