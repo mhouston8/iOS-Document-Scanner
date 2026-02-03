@@ -15,6 +15,8 @@ struct DocumentToolsView: View {
     @State private var showingDocumentSelection = false
     @State private var showingScanner = false
     @State private var scannedPages: [UIImage] = []
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotos: [UIImage] = []
     @State private var showingNamingDialog = false
     @State private var documentName = ""
     
@@ -52,12 +54,16 @@ struct DocumentToolsView: View {
             .sheet(isPresented: $showingScanner) {
                 DocumentScannerView(scannedPages: $scannedPages)
             }
+            .sheet(isPresented: $showingPhotoPicker) {
+                PhotoPickerView(selectedImages: $selectedPhotos, selectionLimit: 0)
+            }
             .sheet(isPresented: $showingNamingDialog) {
                 DocumentNamingView(
                     documentName: $documentName,
-                    pageCount: scannedPages.count,
+                    pageCount: scannedPages.isEmpty ? selectedPhotos.count : scannedPages.count,
                     onSave: {
-                        saveDocument(name: documentName, images: scannedPages)
+                        let imagesToSave = scannedPages.isEmpty ? selectedPhotos : scannedPages
+                        saveDocument(name: documentName, images: imagesToSave)
                     },
                     onCancel: {
                         cancelDocumentNaming()
@@ -67,6 +73,11 @@ struct DocumentToolsView: View {
             .onChange(of: scannedPages) { oldValue, newValue in
                 if !newValue.isEmpty {
                     handleScannedPages(newValue)
+                }
+            }
+            .onChange(of: selectedPhotos) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    handleSelectedPhotos(newValue)
                 }
             }
         }
@@ -228,8 +239,10 @@ struct DocumentToolsView: View {
             showingDocumentSelection = true
         } else if action.title == "Smart Scan" {
             showingScanner = true
+        } else if action.title == "Import Photos" {
+            showingPhotoPicker = true
         } else {
-            // Handle other actions that don't require documents (Import, New Folder, etc.)
+            // Handle other actions that don't require documents (Import Files, New Folder, etc.)
             // TODO: Implement these actions
             print("Action '\(action.title)' tapped - not yet implemented")
         }
@@ -280,6 +293,7 @@ struct DocumentToolsView: View {
                 
                 // 5. Clear state after successful save
                 scannedPages = []
+                selectedPhotos = []
                 documentName = ""
                 showingNamingDialog = false
             } catch {
@@ -288,8 +302,15 @@ struct DocumentToolsView: View {
         }
     }
     
+    private func handleSelectedPhotos(_ images: [UIImage]) {
+        selectedPhotos = images
+        documentName = generateDefaultDocumentName()
+        showingNamingDialog = true
+    }
+    
     private func cancelDocumentNaming() {
         scannedPages = []
+        selectedPhotos = []
         documentName = ""
         showingNamingDialog = false
     }
