@@ -96,9 +96,11 @@ struct SplitDocumentSelectionView: View {
             }
             .navigationDestination(isPresented: $showingPageSelection) {
                 if let document = selectedDocument {
-                    // TODO: Navigate to SplitPageSelectionView
-                    Text("Split Page Selection - Coming Soon")
-                        .navigationTitle("Select Pages")
+                    SplitPageSelectionView(
+                        document: document,
+                        databaseService: databaseService
+                    )
+                    .environmentObject(authService)
                 }
             }
         }
