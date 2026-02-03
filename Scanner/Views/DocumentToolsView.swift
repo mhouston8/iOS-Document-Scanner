@@ -20,6 +20,7 @@ struct DocumentToolsView: View {
     @State private var showingFilePicker = false
     @State private var selectedFiles: [UIImage] = []
     @State private var showingMergeSelection = false
+    @State private var showingSplitSelection = false
     @State private var showingNamingDialog = false
     @State private var documentName = ""
     
@@ -56,6 +57,10 @@ struct DocumentToolsView: View {
             }
             .navigationDestination(isPresented: $showingMergeSelection) {
                 MergeDocumentSelectionView(authService: authService)
+                    .environmentObject(authService)
+            }
+            .navigationDestination(isPresented: $showingSplitSelection) {
+                SplitDocumentSelectionView(authService: authService)
                     .environmentObject(authService)
             }
             .sheet(isPresented: $showingScanner) {
@@ -252,6 +257,8 @@ struct DocumentToolsView: View {
         if documentRequiredActions.contains(action.title) {
             if action.title == "Merge" {
                 showingMergeSelection = true
+            } else if action.title == "Split PDF" {
+                showingSplitSelection = true
             } else {
                 selectedToolTitle = action.title
                 showingDocumentSelection = true

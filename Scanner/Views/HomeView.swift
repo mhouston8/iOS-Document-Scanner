@@ -21,6 +21,7 @@ private struct HomeViewContent: View {
     @State private var selectedCategory: Category = .scan
     @State private var editingDocument: Document? = nil
     @State private var showingMergeSelection = false
+    @State private var showingSplitSelection = false
     
     enum Category: String, CaseIterable {
         case scan = "Scan"
@@ -123,6 +124,10 @@ private struct HomeViewContent: View {
                 MergeDocumentSelectionView(authService: authService)
                     .environmentObject(authService)
             }
+            .navigationDestination(isPresented: $showingSplitSelection) {
+                SplitDocumentSelectionView(authService: authService)
+                    .environmentObject(authService)
+            }
         }
     }
     
@@ -131,6 +136,8 @@ private struct HomeViewContent: View {
     private func handleAction(_ action: ActionItem) {
         if action.title == "Merge" {
             showingMergeSelection = true
+        } else if action.title == "Split" {
+            showingSplitSelection = true
         } else {
             // TODO: Handle other actions
             print("Action '\(action.title)' tapped - not yet implemented")
