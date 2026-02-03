@@ -59,6 +59,9 @@ struct MergeDocumentSelectionView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack(spacing: 0) {
+                        // Instruction label
+                        instructionLabel
+                        
                         // Selected count header
                         if !selectedDocuments.isEmpty {
                             selectedCountHeader
@@ -78,7 +81,7 @@ struct MergeDocumentSelectionView: View {
                     }
                 }
             }
-            .navigationTitle("Select Documents")
+            .navigationTitle("Merge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -110,6 +113,22 @@ struct MergeDocumentSelectionView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Instruction Label
+    
+    private var instructionLabel: some View {
+        VStack(spacing: 8) {
+            Text("Select documents to merge")
+                .font(.headline)
+            Text("Select 2 or more documents to merge into a single document")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGray6))
     }
     
     // MARK: - Selected Count Header
