@@ -136,7 +136,6 @@ struct DocumentToolsView: View {
             actions: [
                 ActionItem(icon: "doc.on.doc", title: "Merge", color: .blue),
                 ActionItem(icon: "doc.badge.plus", title: "Split PDF", color: .indigo),
-                ActionItem(icon: "square.and.arrow.up", title: "Export PDF", color: .green),
                 ActionItem(icon: "arrow.down.doc", title: "Compress", color: .gray)
             ]
         )
@@ -177,6 +176,7 @@ struct DocumentToolsView: View {
         categorySection(
             title: "Convert",
             actions: [
+                ActionItem(icon: "doc.fill", title: "To PDF", color: .red),
                 ActionItem(icon: "doc.richtext", title: "To Word", color: .blue),
                 ActionItem(icon: "tablecells", title: "To Excel", color: .green),
                 ActionItem(icon: "text.alignleft", title: "To Text", color: .gray),
@@ -250,8 +250,8 @@ struct DocumentToolsView: View {
         let documentRequiredActions = [
             "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate", "Redact",
-            "Merge", "Split PDF", "Export PDF", "Compress",
-            "To Word", "To Excel", "To Text", "To Image"
+            "Merge", "Split PDF", "Compress",
+            "To PDF", "To Word", "To Excel", "To Text", "To Image"
         ]
         
         if documentRequiredActions.contains(action.title) {
