@@ -74,17 +74,24 @@ struct SplitPageSelectionView: View {
                         }
                         
                         // Pages list
-                        ScrollView {
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: 5),
-                                GridItem(.flexible(), spacing: 5)
-                            ], spacing: 5) {
-                                ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                                    pageThumbnail(page: page, index: index)
+                        GeometryReader { geometry in
+                            ScrollView {
+                                let padding: CGFloat = 16
+                                let spacing: CGFloat = 2
+                                let availableWidth = geometry.size.width - (padding * 2)
+                                let itemSize = (availableWidth - spacing) / 2
+                                
+                                LazyVGrid(columns: [
+                                    GridItem(.fixed(itemSize), spacing: spacing),
+                                    GridItem(.fixed(itemSize), spacing: spacing)
+                                ], spacing: spacing) {
+                                    ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
+                                        pageThumbnail(page: page, index: index, itemSize: itemSize)
+                                    }
                                 }
+                                .padding(.horizontal, padding)
+                                .padding(.top)
                             }
-                            .padding(.horizontal)
-                            .padding(.top)
                         }
                         
                         // Extract button
@@ -156,7 +163,7 @@ struct SplitPageSelectionView: View {
     
     // MARK: - Page Thumbnail
     
-    private func pageThumbnail(page: DocumentPage, index: Int) -> some View {
+    private func pageThumbnail(page: DocumentPage, index: Int, itemSize: CGFloat) -> some View {
         Button(action: {
             toggleSelection(page.id)
         }) {
@@ -206,7 +213,7 @@ struct SplitPageSelectionView: View {
                             thumbnailPlaceholder
                         }
                     }
-                    .frame(height: 150)
+                    .frame(width: itemSize - 32, height: itemSize - 32) // Account for VStack padding (8*2 = 16) + some margin
                     .clipped()
                     .cornerRadius(8)
                     
@@ -224,7 +231,7 @@ struct SplitPageSelectionView: View {
                     .font(.caption)
                     .foregroundColor(.primary)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: itemSize - 16, height: itemSize - 16) // Account for padding
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
@@ -247,6 +254,7 @@ struct SplitPageSelectionView: View {
                     .font(.system(size: 30))
                     .foregroundColor(.gray)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // MARK: - Extract Button
