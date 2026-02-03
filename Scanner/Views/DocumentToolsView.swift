@@ -122,8 +122,7 @@ struct DocumentToolsView: View {
             actions: [
                 ActionItem(icon: "sparkles", title: "Smart Scan", color: .purple),
                 ActionItem(icon: "photo", title: "Import Photos", color: .blue),
-                ActionItem(icon: "folder", title: "Import Files", color: .green),
-                ActionItem(icon: "person.text.rectangle", title: "Scan ID Card", color: .orange)
+                ActionItem(icon: "folder", title: "Import Files", color: .green)
             ]
         )
     }
@@ -176,10 +175,7 @@ struct DocumentToolsView: View {
             title: "Convert",
             actions: [
                 ActionItem(icon: "doc.fill", title: "To PDF", color: .red),
-                ActionItem(icon: "doc.richtext", title: "To Word", color: .blue),
-                ActionItem(icon: "tablecells", title: "To Excel", color: .green),
-                ActionItem(icon: "text.alignleft", title: "To Text", color: .gray),
-                ActionItem(icon: "photo", title: "To Image", color: .purple)
+                ActionItem(icon: "doc.richtext", title: "To Word", color: .blue)
             ]
         )
     }
@@ -250,7 +246,7 @@ struct DocumentToolsView: View {
             "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate", "Redact",
             "Merge", "Split",
-            "To PDF", "To Word", "To Excel", "To Text", "To Image"
+            "To PDF", "To Word"
         ]
         
         if documentRequiredActions.contains(action.title) {

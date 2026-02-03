@@ -25,8 +25,7 @@ struct HomeViewOptionC: View {
                     ActionItem(icon: "camera.fill", title: "Scan", color: .blue),
                     ActionItem(icon: "sparkles", title: "Smart Scan", color: .purple),
                     ActionItem(icon: "photo", title: "Import Photos", color: .blue),
-                    ActionItem(icon: "folder", title: "Import Files", color: .green),
-                    ActionItem(icon: "person.text.rectangle", title: "ID Card", color: .orange)
+                    ActionItem(icon: "folder", title: "Import Files", color: .green)
                 ]
             case .pdf:
                 return [

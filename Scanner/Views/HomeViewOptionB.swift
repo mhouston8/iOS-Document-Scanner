@@ -26,8 +26,7 @@ struct HomeViewOptionB: View {
                     actions: [
                         ActionItem(icon: "sparkles", title: "Smart Scan", color: .purple),
                         ActionItem(icon: "photo", title: "Import Photos", color: .blue),
-                        ActionItem(icon: "folder", title: "Import Files", color: .green),
-                        ActionItem(icon: "person.text.rectangle", title: "Scan ID Card", color: .orange)
+                        ActionItem(icon: "folder", title: "Import Files", color: .green)
                     ]
                 )
                 
