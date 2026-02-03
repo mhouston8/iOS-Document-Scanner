@@ -162,8 +162,7 @@ struct DocumentToolsView: View {
             actions: [
                 ActionItem(icon: "signature", title: "Sign", color: .blue),
                 ActionItem(icon: "textformat", title: "Watermark", color: .cyan),
-                ActionItem(icon: "text.bubble", title: "Annotate", color: .orange),
-                ActionItem(icon: "eye.slash.fill", title: "Redact", color: .black)
+                ActionItem(icon: "text.bubble", title: "Annotate", color: .orange)
             ]
         )
     }
@@ -244,7 +243,7 @@ struct DocumentToolsView: View {
         // Actions that require document selection
         let documentRequiredActions = [
             "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
-            "Sign", "Watermark", "Annotate", "Redact",
+            "Sign", "Watermark", "Annotate",
             "Merge", "Split",
             "To PDF", "To Word"
         ]

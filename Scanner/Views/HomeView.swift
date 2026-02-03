@@ -57,8 +57,7 @@ private struct HomeViewContent: View {
                 return [
                     ActionItem(icon: "signature", title: "Sign", color: .blue),
                     ActionItem(icon: "textformat", title: "Watermark", color: .cyan),
-                    ActionItem(icon: "text.bubble", title: "Annotate", color: .orange),
-                    ActionItem(icon: "eye.slash.fill", title: "Redact", color: .black)
+                    ActionItem(icon: "text.bubble", title: "Annotate", color: .orange)
                 ]
             case .organize:
                 return [
