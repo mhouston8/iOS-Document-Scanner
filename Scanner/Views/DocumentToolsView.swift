@@ -135,7 +135,7 @@ struct DocumentToolsView: View {
             title: "PDF Tools",
             actions: [
                 ActionItem(icon: "doc.on.doc", title: "Merge", color: .blue),
-                ActionItem(icon: "doc.badge.plus", title: "Split PDF", color: .indigo),
+                ActionItem(icon: "doc.badge.plus", title: "Split", color: .indigo),
                 ActionItem(icon: "arrow.down.doc", title: "Compress", color: .gray)
             ]
         )
@@ -250,7 +250,7 @@ struct DocumentToolsView: View {
         let documentRequiredActions = [
             "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate", "Redact",
-            "Merge", "Split PDF", "Compress",
+            "Merge", "Split", "Compress",
             "To PDF", "To Word", "To Excel", "To Text", "To Image"
         ]
         
