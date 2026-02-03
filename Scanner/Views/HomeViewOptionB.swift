@@ -36,8 +36,7 @@ struct HomeViewOptionB: View {
                     actions: [
                         ActionItem(icon: "doc.on.doc", title: "Merge", color: .blue),
                         ActionItem(icon: "doc.badge.plus", title: "Split", color: .indigo),
-                        ActionItem(icon: "square.and.arrow.up", title: "Export PDF", color: .green),
-                        ActionItem(icon: "arrow.down.doc", title: "Compress", color: .gray)
+                        ActionItem(icon: "square.and.arrow.up", title: "Export PDF", color: .green)
                     ]
                 )
                 
