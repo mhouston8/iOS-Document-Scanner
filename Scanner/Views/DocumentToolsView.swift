@@ -19,6 +19,7 @@ struct DocumentToolsView: View {
     @State private var selectedPhotos: [UIImage] = []
     @State private var showingFilePicker = false
     @State private var selectedFiles: [UIImage] = []
+    @State private var showingMergeSelection = false
     @State private var showingNamingDialog = false
     @State private var documentName = ""
     
@@ -52,6 +53,10 @@ struct DocumentToolsView: View {
                     DocumentSelectionViaToolView(selectedToolTitle: toolTitle, authService: authService)
                         .environmentObject(authService)
                 }
+            }
+            .navigationDestination(isPresented: $showingMergeSelection) {
+                MergeDocumentSelectionView(authService: authService)
+                    .environmentObject(authService)
             }
             .sheet(isPresented: $showingScanner) {
                 DocumentScannerView(scannedPages: $scannedPages)
@@ -245,8 +250,12 @@ struct DocumentToolsView: View {
         ]
         
         if documentRequiredActions.contains(action.title) {
-            selectedToolTitle = action.title
-            showingDocumentSelection = true
+            if action.title == "Merge" {
+                showingMergeSelection = true
+            } else {
+                selectedToolTitle = action.title
+                showingDocumentSelection = true
+            }
         } else if action.title == "Smart Scan" {
             showingScanner = true
         } else if action.title == "Import Photos" {

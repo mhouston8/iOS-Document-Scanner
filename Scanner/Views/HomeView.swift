@@ -20,6 +20,7 @@ private struct HomeViewContent: View {
     @StateObject private var viewModel: HomeViewModel
     @State private var selectedCategory: Category = .scan
     @State private var editingDocument: Document? = nil
+    @State private var showingMergeSelection = false
     
     enum Category: String, CaseIterable {
         case scan = "Scan"
@@ -118,6 +119,21 @@ private struct HomeViewContent: View {
             .fullScreenCover(item: $editingDocument) { document in
                 DocumentEditView(document: document)
             }
+            .navigationDestination(isPresented: $showingMergeSelection) {
+                MergeDocumentSelectionView(authService: authService)
+                    .environmentObject(authService)
+            }
+        }
+    }
+    
+    // MARK: - Action Handling
+    
+    private func handleAction(_ action: ActionItem) {
+        if action.title == "Merge" {
+            showingMergeSelection = true
+        } else {
+            // TODO: Handle other actions
+            print("Action '\(action.title)' tapped - not yet implemented")
         }
     }
     
@@ -302,7 +318,7 @@ private struct HomeViewContent: View {
     
     private func actionButton(action: ActionItem) -> some View {
         Button(action: {
-            // TODO: Handle action
+            handleAction(action)
         }) {
             VStack(spacing: 8) {
                 Image(systemName: action.icon)
