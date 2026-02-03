@@ -13,6 +13,16 @@ struct DocumentToolsView: View {
     @EnvironmentObject var authService: AuthenticationService
     @State private var selectedToolTitle: String?
     @State private var showingDocumentSelection = false
+    @State private var showingScanner = false
+    @State private var scannedPages: [UIImage] = []
+    @State private var showingNamingDialog = false
+    @State private var documentName = ""
+    
+    private let databaseService: DatabaseService
+    
+    init() {
+        self.databaseService = DatabaseService(client: SupabaseDatabaseClient())
+    }
     
     var body: some View {
         NavigationStack {
@@ -37,6 +47,26 @@ struct DocumentToolsView: View {
                 if let toolTitle = selectedToolTitle {
                     DocumentSelectionViaToolView(selectedToolTitle: toolTitle, authService: authService)
                         .environmentObject(authService)
+                }
+            }
+            .sheet(isPresented: $showingScanner) {
+                DocumentScannerView(scannedPages: $scannedPages)
+            }
+            .sheet(isPresented: $showingNamingDialog) {
+                DocumentNamingView(
+                    documentName: $documentName,
+                    pageCount: scannedPages.count,
+                    onSave: {
+                        saveDocument(name: documentName, images: scannedPages)
+                    },
+                    onCancel: {
+                        cancelDocumentNaming()
+                    }
+                )
+            }
+            .onChange(of: scannedPages) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    handleScannedPages(newValue)
                 }
             }
         }
@@ -196,11 +226,72 @@ struct DocumentToolsView: View {
         if documentRequiredActions.contains(action.title) {
             selectedToolTitle = action.title
             showingDocumentSelection = true
+        } else if action.title == "Smart Scan" {
+            showingScanner = true
         } else {
-            // Handle actions that don't require documents (Scan, Import, New Folder, etc.)
+            // Handle other actions that don't require documents (Import, New Folder, etc.)
             // TODO: Implement these actions
             print("Action '\(action.title)' tapped - not yet implemented")
         }
+    }
+    
+    // MARK: - Scanner Handling
+    
+    private func handleScannedPages(_ images: [UIImage]) {
+        scannedPages = images
+        documentName = generateDefaultDocumentName()
+        showingNamingDialog = true
+    }
+    
+    private func generateDefaultDocumentName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return "Document \(formatter.string(from: Date()))"
+    }
+    
+    private func saveDocument(name: String, images: [UIImage]) {
+        Task {
+            do {
+                // 1. Get current user ID
+                guard let userId = await authService.currentUserId() else {
+                    print("Error: No authenticated user")
+                    return
+                }
+                
+                // 2. Calculate file size (sum of JPEG data sizes)
+                let fileSize = images.reduce(Int64(0)) { total, image in
+                    let imageDataSize = image.jpegData(compressionQuality: 0.8)?.count ?? 0
+                    return total + Int64(imageDataSize)
+                }
+                
+                // 3. Create Document model
+                let document = Document(
+                    userId: userId,
+                    name: name,
+                    pageCount: images.count,
+                    fileSize: fileSize
+                )
+                
+                // 4. Save document and pages to database
+                try await databaseService.createDocument(document, pages: images)
+                
+                print("Successfully saved document '\(name)' with \(images.count) pages")
+                
+                // 5. Clear state after successful save
+                scannedPages = []
+                documentName = ""
+                showingNamingDialog = false
+            } catch {
+                print("Error saving document: \(error)")
+            }
+        }
+    }
+    
+    private func cancelDocumentNaming() {
+        scannedPages = []
+        documentName = ""
+        showingNamingDialog = false
     }
 }
 
