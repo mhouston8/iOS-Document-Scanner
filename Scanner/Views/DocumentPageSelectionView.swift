@@ -38,6 +38,9 @@ struct DocumentPageSelectionView: View {
     @State private var showingAdjustView = false
     @State private var adjustImage: UIImage?
     @State private var adjustPage: DocumentPage?
+    @State private var showingRotateView = false
+    @State private var rotateImage: UIImage?
+    @State private var rotatePage: DocumentPage?
     @State private var isLoadingImage = false
     
     init(document: Document, toolTitle: String, databaseService: DatabaseService) {
@@ -82,21 +85,37 @@ struct DocumentPageSelectionView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            // Header Info
-                            headerInfo
-                            
-                            // Page Grid
-                            pageGrid
-                            
-                            // Continue Button
-                            if selectedPageIndex != nil {
-                                continueButton
-                                    .padding(.top, 8)
+                    VStack(spacing: 0) {
+                        // Header Info
+                        headerInfo
+                            .padding()
+                        
+                        // Page Grid
+                        GeometryReader { geometry in
+                            ScrollView {
+                                let padding: CGFloat = 16
+                                let spacing: CGFloat = 2
+                                let availableWidth = geometry.size.width - (padding * 2)
+                                let itemSize = (availableWidth - spacing) / 2
+                                
+                                LazyVGrid(columns: [
+                                    GridItem(.fixed(itemSize), spacing: spacing),
+                                    GridItem(.fixed(itemSize), spacing: spacing)
+                                ], spacing: spacing) {
+                                    ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
+                                        pageThumbnail(page: page, index: index, itemSize: itemSize)
+                                    }
+                                }
+                                .padding(.horizontal, padding)
+                                .padding(.top)
                             }
                         }
-                        .padding()
+                        
+                        // Continue Button
+                        if selectedPageIndex != nil {
+                            continueButton
+                                .padding()
+                        }
                     }
                 }
             }
@@ -209,6 +228,21 @@ struct DocumentPageSelectionView: View {
                     )
                 }
             }
+            .fullScreenCover(isPresented: $showingRotateView) {
+                if let image = rotateImage {
+                    RotateView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.rotateImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveRotatedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
         }
     }
     
@@ -227,19 +261,7 @@ struct DocumentPageSelectionView: View {
     
     // MARK: - Page Grid
     
-    private var pageGrid: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 16) {
-            ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                pageThumbnail(page: page, index: index)
-            }
-        }
-    }
-    
-    private func pageThumbnail(page: DocumentPage, index: Int) -> some View {
+    private func pageThumbnail(page: DocumentPage, index: Int, itemSize: CGFloat) -> some View {
         Button(action: {
             selectedPageIndex = index
         }) {
@@ -287,7 +309,7 @@ struct DocumentPageSelectionView: View {
                         thumbnailPlaceholder
                     }
                 }
-                .frame(height: 150)
+                .frame(width: itemSize - 32, height: itemSize - 32) // Account for VStack padding (8*2 = 16) + some margin
                 .clipped()
                 .cornerRadius(8)
                 
@@ -296,6 +318,7 @@ struct DocumentPageSelectionView: View {
                     .font(.caption)
                     .foregroundColor(.primary)
             }
+            .frame(width: itemSize - 16, height: itemSize - 16) // Account for padding
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
@@ -307,6 +330,7 @@ struct DocumentPageSelectionView: View {
             )
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
     
     private var thumbnailPlaceholder: some View {
@@ -341,6 +365,8 @@ struct DocumentPageSelectionView: View {
                 loadPageImageForAnnotate(page: selectedPage)
             } else if toolTitle == "Adjust" {
                 loadPageImageForAdjust(page: selectedPage)
+            } else if toolTitle == "Rotate" {
+                loadPageImageForRotate(page: selectedPage)
             } else {
                 // TODO: Handle other tools
                 print("Selected page \(selectedPage.pageNumber) for tool: \(toolTitle)")
@@ -692,6 +718,74 @@ struct DocumentPageSelectionView: View {
                 }
             } catch {
                 print("ERROR [DocumentPageSelectionView]: Failed to save annotated image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Rotate Handling
+    
+    private func loadPageImageForRotate(page: DocumentPage) {
+        Task {
+            isLoadingImage = true
+            do {
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                    print("ERROR [DocumentPageSelectionView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentPageSelectionView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    rotateImage = image
+                    rotatePage = page
+                    showingRotateView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to load image: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveRotatedImage(_ rotatedImage: UIImage) {
+        guard let page = rotatePage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: rotatedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                var updatedDocument = document
+                updatedDocument.updatedAt = Date()
+                try await databaseService.updateDocumentInDatabase(updatedDocument)
+                
+                await MainActor.run {
+                    showingRotateView = false
+                    rotateImage = nil
+                    rotatePage = nil
+                    selectedPageIndex = nil
+                }
+            } catch {
+                print("ERROR [DocumentPageSelectionView]: Failed to save rotated image: \(error.localizedDescription)")
             }
         }
     }

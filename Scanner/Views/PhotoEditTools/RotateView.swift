@@ -147,23 +147,59 @@ struct RotateView: View {
     
     private func rotationButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button(action: {
-            withAnimation {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 action()
             }
         }) {
             VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 24))
+                    .font(.system(size: 24, weight: .medium))
                     .foregroundColor(.white)
                 
                 Text(title)
                     .font(.caption)
-                    .foregroundColor(.white)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.9))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color(.systemGray5).opacity(0.3))
-            .cornerRadius(12)
+            .padding(.vertical, 18)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.blue.opacity(0.8),
+                        Color.purple.opacity(0.7)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .cornerRadius(16)
+            .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.1)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(ModernButtonStyle())
+    }
+    
+    // MARK: - Modern Button Style
+    
+    struct ModernButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+                .opacity(configuration.isPressed ? 0.8 : 1.0)
         }
     }
     

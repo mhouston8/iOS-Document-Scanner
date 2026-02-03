@@ -34,6 +34,9 @@ struct DocumentSelectionViaToolView: View {
     @State private var showingAdjustView = false
     @State private var adjustImage: UIImage?
     @State private var adjustPage: DocumentPage?
+    @State private var showingRotateView = false
+    @State private var rotateImage: UIImage?
+    @State private var rotatePage: DocumentPage?
     @State private var isLoadingImage = false
     
     private let databaseService: DatabaseService
@@ -118,6 +121,8 @@ struct DocumentSelectionViaToolView: View {
                         loadFirstPageForAnnotate(document: document)
                     } else if selectedToolTitle == "Adjust" {
                         loadFirstPageForAdjust(document: document)
+                    } else if selectedToolTitle == "Rotate" {
+                        loadFirstPageForRotate(document: document)
                     } else {
                         // TODO: Handle other tools
                         print("Selected single-page document: \(document.name) for tool: \(selectedToolTitle)")
@@ -230,6 +235,21 @@ struct DocumentSelectionViaToolView: View {
                             set: { newImage in
                                 if let newImage = newImage {
                                     saveAdjustedImage(newImage)
+                                }
+                            }
+                        )
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingRotateView) {
+                if let image = rotateImage {
+                    RotateView(
+                        image: image,
+                        editedImage: Binding(
+                            get: { self.rotateImage },
+                            set: { newImage in
+                                if let newImage = newImage {
+                                    saveRotatedImage(newImage)
                                 }
                             }
                         )
@@ -630,6 +650,85 @@ struct DocumentSelectionViaToolView: View {
                 }
             } catch {
                 print("ERROR [DocumentSelectionViaToolView]: Failed to save annotated image: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Rotate Handling
+    
+    private func loadFirstPageForRotate(document: Document) {
+        Task {
+            isLoadingImage = true
+            do {
+                // Load pages for the document
+                let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
+                guard let firstPage = pages.sorted(by: { $0.pageNumber < $1.pageNumber }).first else {
+                    print("ERROR [DocumentSelectionViaToolView]: No pages found for document")
+                    isLoadingImage = false
+                    return
+                }
+                
+                // Load the image
+                guard let imageUrl = DatabaseService.cacheBustedURL(from: firstPage.imageUrl) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Invalid image URL")
+                    isLoadingImage = false
+                    return
+                }
+                
+                var request = URLRequest(url: imageUrl)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else {
+                    print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage")
+                    isLoadingImage = false
+                    return
+                }
+                
+                await MainActor.run {
+                    rotateImage = image
+                    rotatePage = firstPage
+                    showingRotateView = true
+                    isLoadingImage = false
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to load page: \(error.localizedDescription)")
+                isLoadingImage = false
+            }
+        }
+    }
+    
+    private func saveRotatedImage(_ rotatedImage: UIImage) {
+        guard let page = rotatePage else { return }
+        
+        Task {
+            do {
+                // Update the page in storage
+                let urls = try await databaseService.updateDocumentPageInStorage(page, image: rotatedImage)
+                
+                // Update the page record
+                var updatedPage = page
+                updatedPage.imageUrl = urls.imageUrl
+                updatedPage.thumbnailUrl = urls.thumbnailUrl
+                
+                // Update in database
+                try await databaseService.updateDocumentPagesInDatabase([updatedPage])
+                
+                // Update document timestamp
+                if let document = selectedDocument {
+                    var updatedDocument = document
+                    updatedDocument.updatedAt = Date()
+                    try await databaseService.updateDocumentInDatabase(updatedDocument)
+                }
+                
+                await MainActor.run {
+                    showingRotateView = false
+                    rotateImage = nil
+                    rotatePage = nil
+                    selectedDocument = nil
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to save rotated image: \(error.localizedDescription)")
             }
         }
     }
