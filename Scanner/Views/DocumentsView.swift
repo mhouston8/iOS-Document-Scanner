@@ -63,16 +63,25 @@ private struct DocumentsViewContent: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(viewModel.documents) { documentWithThumbnail in
-                        DocumentRowView(
-                            documentWithThumbnail: documentWithThumbnail,
-                            onTap: {
-                                editingDocument = documentWithThumbnail.document
-                            },
-                            onEllipsisTap: {
-                                showingDocumentOptions = documentWithThumbnail.document
+                    List {
+                        ForEach(viewModel.documents) { documentWithThumbnail in
+                            DocumentRowView(
+                                documentWithThumbnail: documentWithThumbnail,
+                                onTap: {
+                                    editingDocument = documentWithThumbnail.document
+                                },
+                                onEllipsisTap: {
+                                    showingDocumentOptions = documentWithThumbnail.document
+                                }
+                            )
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteDocument(documentWithThumbnail.document)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -100,6 +109,21 @@ private struct DocumentsViewContent: View {
                         showingDocumentOptions = nil
                     }
                 )
+            }
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func deleteDocument(_ document: Document) {
+        Task {
+            do {
+                try await viewModel.databaseService.deleteDocumentFromDatabase(documentId: document.id)
+                await MainActor.run {
+                    viewModel.loadDocuments()
+                }
+            } catch {
+                print("ERROR [DocumentsViewContent]: Failed to delete document: \(error.localizedDescription)")
             }
         }
     }
