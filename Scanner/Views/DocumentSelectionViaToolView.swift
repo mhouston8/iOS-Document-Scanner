@@ -111,6 +111,12 @@ struct DocumentSelectionViaToolView: View {
                 if selectedToolTitle == "Export to JPEG" {
                     exportDocumentToJPEG(document: document)
                     return
+                } else if selectedToolTitle == "Export to PNG" {
+                    exportDocumentToPNG(document: document)
+                    return
+                } else if selectedToolTitle == "Export to PDF" {
+                    exportDocumentToPDF(document: document)
+                    return
                 }
                 
                 // If multi-page document, show page selection
@@ -685,29 +691,8 @@ struct DocumentSelectionViaToolView: View {
             isExporting = true
             
             do {
-                // Load all pages for the document
-                let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
-                let sortedPages = pages.sorted { $0.pageNumber < $1.pageNumber }
-                
-                // Load all images
-                var images: [UIImage] = []
-                for page in sortedPages {
-                    guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
-                        print("ERROR [DocumentSelectionViaToolView]: Invalid image URL for page \(page.pageNumber)")
-                        continue
-                    }
-                    
-                    var request = URLRequest(url: imageUrl)
-                    request.cachePolicy = .reloadIgnoringLocalCacheData
-                    
-                    let (data, _) = try await URLSession.shared.data(for: request)
-                    guard let image = UIImage(data: data) else {
-                        print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage for page \(page.pageNumber)")
-                        continue
-                    }
-                    
-                    images.append(image)
-                }
+                // Load all pages and images
+                let images = try await loadAllPageImages(for: document)
                 
                 guard !images.isEmpty else {
                     print("ERROR [DocumentSelectionViaToolView]: No images loaded for export")
@@ -730,6 +715,98 @@ struct DocumentSelectionViaToolView: View {
                 isExporting = false
             }
         }
+    }
+    
+    private func exportDocumentToPNG(document: Document) {
+        Task {
+            isExporting = true
+            
+            do {
+                // Load all pages and images
+                let images = try await loadAllPageImages(for: document)
+                
+                guard !images.isEmpty else {
+                    print("ERROR [DocumentSelectionViaToolView]: No images loaded for export")
+                    isExporting = false
+                    return
+                }
+                
+                // Export to PNG using DocumentExportManager
+                let exportManager = DocumentExportManager()
+                let fileURLs = try await exportManager.exportToPNG(images: images, documentName: document.name)
+                
+                await MainActor.run {
+                    exportFileURLs = fileURLs
+                    isExporting = false
+                    showingShareSheet = true
+                    selectedDocument = nil // Reset selection
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to export document: \(error.localizedDescription)")
+                isExporting = false
+            }
+        }
+    }
+    
+    private func exportDocumentToPDF(document: Document) {
+        Task {
+            isExporting = true
+            
+            do {
+                // Load all pages and images
+                let images = try await loadAllPageImages(for: document)
+                
+                guard !images.isEmpty else {
+                    print("ERROR [DocumentSelectionViaToolView]: No images loaded for export")
+                    isExporting = false
+                    return
+                }
+                
+                // Export to PDF using DocumentExportManager
+                let exportManager = DocumentExportManager()
+                let fileURL = try await exportManager.exportToPDF(images: images, documentName: document.name)
+                
+                await MainActor.run {
+                    exportFileURLs = [fileURL] // PDF returns single file
+                    isExporting = false
+                    showingShareSheet = true
+                    selectedDocument = nil // Reset selection
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to export document: \(error.localizedDescription)")
+                isExporting = false
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func loadAllPageImages(for document: Document) async throws -> [UIImage] {
+        // Load all pages for the document
+        let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
+        let sortedPages = pages.sorted { $0.pageNumber < $1.pageNumber }
+        
+        // Load all images
+        var images: [UIImage] = []
+        for page in sortedPages {
+            guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                print("ERROR [DocumentSelectionViaToolView]: Invalid image URL for page \(page.pageNumber)")
+                continue
+            }
+            
+            var request = URLRequest(url: imageUrl)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let image = UIImage(data: data) else {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage for page \(page.pageNumber)")
+                continue
+            }
+            
+            images.append(image)
+        }
+        
+        return images
     }
     
     // MARK: - Rotate Handling
