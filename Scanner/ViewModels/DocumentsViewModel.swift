@@ -27,7 +27,7 @@ class DocumentsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let databaseService: DatabaseService
+    let databaseService: DatabaseService
     private let authService: AuthenticationService
     
     init(

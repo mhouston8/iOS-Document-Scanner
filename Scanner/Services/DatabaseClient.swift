@@ -13,6 +13,7 @@ protocol DatabaseClientProtocol {
     func createDocument(_ document: Document, pages: [UIImage]) async throws
     func readDocuments(userId: UUID) async throws -> [Document]
     func updateDocumentInDatabase(_ document: Document) async throws
+    func deleteDocumentFromDatabase(documentId: UUID) async throws
     
     // MARK: - Document Page Operations
     func readDocumentPagesFromDatabase(documentId: UUID) async throws -> [DocumentPage]

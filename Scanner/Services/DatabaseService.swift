@@ -62,6 +62,10 @@ class DatabaseService {
         try await client.updateDocumentInDatabase(document)
     }
     
+    func deleteDocumentFromDatabase(documentId: UUID) async throws {
+        try await client.deleteDocumentFromDatabase(documentId: documentId)
+    }
+    
     // MARK: - Document Page Operations
     
     func readDocumentPagesFromDatabase(documentId: UUID) async throws -> [DocumentPage] {

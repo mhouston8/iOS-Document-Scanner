@@ -242,6 +242,53 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
+    func deleteDocumentFromDatabase(documentId: UUID) async throws {
+        let uid = try await client.auth.session.user.id.uuidString.lowercased()
+        
+        do {
+            // 1. Load all pages for this document to get their storage paths
+            let pages = try await readDocumentPagesFromDatabase(documentId: documentId)
+            
+            // 2. Delete all page images and thumbnails from storage
+            for page in pages {
+                let documentPath = "\(uid)/\(documentId.uuidString)/page_\(page.pageNumber).jpg"
+                let thumbnailPath = "\(uid)/\(documentId.uuidString)/thumbnail_\(page.pageNumber).jpg"
+                
+                // Delete image (ignore errors if file doesn't exist)
+                try? await client.storage
+                    .from(SupabaseConfig.documentsBucket)
+                    .remove(paths: [documentPath])
+                
+                // Delete thumbnail (ignore errors if file doesn't exist)
+                try? await client.storage
+                    .from(SupabaseConfig.documentsBucket)
+                    .remove(paths: [thumbnailPath])
+            }
+            
+            // 3. Delete all document pages from database
+            try await client.database
+                .from("DocumentPage")
+                .delete()
+                .eq("document_id", value: documentId.uuidString)
+                .execute()
+            
+            print("Deleted \(pages.count) pages for document \(documentId.uuidString)")
+            
+            // 4. Delete the document record from database
+            try await client.database
+                .from("Document")
+                .delete()
+                .eq("id", value: documentId.uuidString)
+                .execute()
+            
+            print("Deleted document \(documentId.uuidString)")
+        } catch {
+            let error = DatabaseError.deleteFailed("Failed to delete document: \(error.localizedDescription)")
+            print("ERROR [deleteDocumentFromDatabase]: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
     func updateDocumentInDatabase(_ document: Document) async throws {
         // TODO: Implement Supabase update
         // Update document metadata
