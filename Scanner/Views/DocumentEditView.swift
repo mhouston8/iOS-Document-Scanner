@@ -45,15 +45,15 @@ struct DocumentEditView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
             
             if viewModel.isLoading {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
             } else if viewModel.images.isEmpty {
                 VStack {
                     Text("No images found")
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                 }
             } else {
                 VStack(spacing: 0) {
@@ -121,13 +121,13 @@ struct DocumentEditView: View {
             Button("Cancel") {
                 dismiss()
             }
-            .foregroundColor(.white)
+            .foregroundColor(.primary)
             
             Spacer()
             
             Text("Edit Document")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             
             Spacer()
             
@@ -146,7 +146,7 @@ struct DocumentEditView: View {
             .disabled(!viewModel.hasUnsavedChanges || viewModel.isSaving)
         }
         .padding()
-        .background(Color.black.opacity(0.5))
+        .background(Color(.systemBackground).opacity(0.95))
     }
     
     // MARK: - Image Preview
@@ -154,7 +154,7 @@ struct DocumentEditView: View {
     private var imagePreview: some View {
         ZStack {
             if viewModel.editedImages.isEmpty {
-                Color.black
+                Color(.systemGray6)
             } else {
                 TabView(selection: $viewModel.currentPageIndex) {
                     ForEach(0..<viewModel.editedImages.count, id: \.self) { index in
@@ -175,9 +175,9 @@ struct DocumentEditView: View {
                         Spacer()
                         Text("\(viewModel.currentPageIndex + 1) / \(viewModel.images.count)")
                             .font(.caption)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .padding(8)
-                            .background(Color.black.opacity(0.6))
+                            .background(Color(.systemGray5).opacity(0.9))
                             .cornerRadius(8)
                             .padding()
                     }
@@ -204,7 +204,7 @@ struct DocumentEditView: View {
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 16)
-        .background(Color.black.opacity(0.7))
+        .background(Color(.systemBackground).opacity(0.95))
     }
     
     private var rotateButton: some View {
@@ -214,16 +214,16 @@ struct DocumentEditView: View {
             VStack(spacing: 8) {
                 Image(systemName: "rotate.left")
                     .font(.system(size: 24))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(width: 50, height: 50)
                     .background(
                         Circle()
-                            .fill(Color.white.opacity(0.1))
+                            .fill(Color(.systemGray5))
                     )
                 
                 Text("Rotate")
                     .font(.caption)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
             }
         }
     }
@@ -235,16 +235,16 @@ struct DocumentEditView: View {
             VStack(spacing: 8) {
                 Image(systemName: tool.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(width: 50, height: 50)
                     .background(
                         Circle()
-                            .fill(Color.white.opacity(0.1))
+                            .fill(Color(.systemGray5))
                     )
                 
                 Text(tool.rawValue)
                     .font(.caption)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
             }
         }
     }
