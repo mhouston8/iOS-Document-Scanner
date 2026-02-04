@@ -42,7 +42,7 @@ struct DocumentToolsView: View {
                     pdfToolsSection
                     editAndEnhanceSection
                     signAndMarkSection
-                    convertSection
+                    exportSection
                     organizeSection
                 }
                 .padding()
@@ -167,14 +167,15 @@ struct DocumentToolsView: View {
         )
     }
     
-    // MARK: - Convert Section
+    // MARK: - Export Section
     
-    private var convertSection: some View {
+    private var exportSection: some View {
         categorySection(
-            title: "Convert",
+            title: "Export",
             actions: [
-                ActionItem(icon: "doc.fill", title: "To PDF", color: .red),
-                ActionItem(icon: "doc.richtext", title: "To Word", color: .blue)
+                ActionItem(icon: "doc.fill", title: "Export to PDF", color: .red),
+                ActionItem(icon: "photo", title: "Export to JPEG", color: .blue),
+                ActionItem(icon: "photo.fill", title: "Export to PNG", color: .purple)
             ]
         )
     }
@@ -245,7 +246,7 @@ struct DocumentToolsView: View {
             "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate",
             "Merge", "Split",
-            "To PDF", "To Word"
+            "Export to PDF", "Export to JPEG", "Export to PNG"
         ]
         
         if documentRequiredActions.contains(action.title) {
