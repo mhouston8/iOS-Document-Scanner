@@ -38,6 +38,9 @@ struct DocumentSelectionViaToolView: View {
     @State private var rotateImage: UIImage?
     @State private var rotatePage: DocumentPage?
     @State private var isLoadingImage = false
+    @State private var isExporting = false
+    @State private var exportFileURLs: [URL] = []
+    @State private var showingShareSheet = false
     
     private let databaseService: DatabaseService
     
@@ -104,6 +107,12 @@ struct DocumentSelectionViaToolView: View {
             .onChange(of: selectedDocument) { oldValue, newValue in
                 guard let document = newValue else { return }
                 
+                // Handle export actions (export all pages, no page selection needed)
+                if selectedToolTitle == "Export to JPEG" {
+                    exportDocumentToJPEG(document: document)
+                    return
+                }
+                
                 // If multi-page document, show page selection
                 if document.pageCount > 1 {
                     showingPageSelection = true
@@ -140,6 +149,21 @@ struct DocumentSelectionViaToolView: View {
                             .cornerRadius(12)
                     }
                 }
+                
+                if isExporting {
+                    ZStack {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                        ProgressView("Exporting...")
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                ShareSheet(items: exportFileURLs)
+                    .presentationDetents([.medium, .large])
             }
             .navigationDestination(isPresented: $showingPageSelection) {
                 if let document = selectedDocument {
@@ -654,6 +678,60 @@ struct DocumentSelectionViaToolView: View {
         }
     }
     
+    // MARK: - Export Handling
+    
+    private func exportDocumentToJPEG(document: Document) {
+        Task {
+            isExporting = true
+            
+            do {
+                // Load all pages for the document
+                let pages = try await databaseService.readDocumentPagesFromDatabase(documentId: document.id)
+                let sortedPages = pages.sorted { $0.pageNumber < $1.pageNumber }
+                
+                // Load all images
+                var images: [UIImage] = []
+                for page in sortedPages {
+                    guard let imageUrl = DatabaseService.cacheBustedURL(from: page.imageUrl) else {
+                        print("ERROR [DocumentSelectionViaToolView]: Invalid image URL for page \(page.pageNumber)")
+                        continue
+                    }
+                    
+                    var request = URLRequest(url: imageUrl)
+                    request.cachePolicy = .reloadIgnoringLocalCacheData
+                    
+                    let (data, _) = try await URLSession.shared.data(for: request)
+                    guard let image = UIImage(data: data) else {
+                        print("ERROR [DocumentSelectionViaToolView]: Failed to create UIImage for page \(page.pageNumber)")
+                        continue
+                    }
+                    
+                    images.append(image)
+                }
+                
+                guard !images.isEmpty else {
+                    print("ERROR [DocumentSelectionViaToolView]: No images loaded for export")
+                    isExporting = false
+                    return
+                }
+                
+                // Export to JPEG using DocumentExportManager
+                let exportManager = DocumentExportManager()
+                let fileURLs = try await exportManager.exportToJPEG(images: images, documentName: document.name)
+                
+                await MainActor.run {
+                    exportFileURLs = fileURLs
+                    isExporting = false
+                    showingShareSheet = true
+                    selectedDocument = nil // Reset selection
+                }
+            } catch {
+                print("ERROR [DocumentSelectionViaToolView]: Failed to export document: \(error.localizedDescription)")
+                isExporting = false
+            }
+        }
+    }
+    
     // MARK: - Rotate Handling
     
     private func loadFirstPageForRotate(document: Document) {
@@ -897,6 +975,29 @@ private struct DocumentRowView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [URL]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        
+        // Configure for iPad (popover) if needed
+        if let popover = controller.popoverPresentationController {
+            // This will be set by the presenting view controller
+            popover.permittedArrowDirections = .any
+        }
+        
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
