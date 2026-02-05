@@ -23,6 +23,20 @@ private struct HomeViewContent: View {
     @State private var showingMergeSelection = false
     @State private var showingSplitSelection = false
     
+    // Tool-related state (matching DocumentToolsView)
+    @State private var selectedToolTitle: String?
+    @State private var showingDocumentSelection = false
+    @State private var showingScanner = false
+    @State private var scannedPages: [UIImage] = []
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotos: [UIImage] = []
+    @State private var showingFilePicker = false
+    @State private var selectedFiles: [UIImage] = []
+    @State private var showingNamingDialog = false
+    @State private var documentName = ""
+    
+    private let databaseService: DatabaseService
+    
     enum Category: String, CaseIterable {
         case scan = "Scan"
         case pdf = "PDF"
@@ -72,9 +86,10 @@ private struct HomeViewContent: View {
     
     init(authService: AuthenticationService) {
         self.authService = authService
-        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+        let dbService = DatabaseService(client: SupabaseDatabaseClient())
+        self.databaseService = dbService
         _viewModel = StateObject(wrappedValue: HomeViewModel(
-            databaseService: databaseService,
+            databaseService: dbService,
             authService: authService
         ))
     }
@@ -125,20 +140,173 @@ private struct HomeViewContent: View {
                 SplitDocumentSelectionView(authService: authService)
                     .environmentObject(authService)
             }
+            .navigationDestination(isPresented: $showingDocumentSelection) {
+                if let toolTitle = selectedToolTitle {
+                    DocumentSelectionViaToolView(selectedToolTitle: toolTitle, authService: authService)
+                        .environmentObject(authService)
+                }
+            }
+            .sheet(isPresented: $showingScanner) {
+                DocumentScannerView(scannedPages: $scannedPages)
+            }
+            .sheet(isPresented: $showingPhotoPicker) {
+                PhotoPickerView(selectedImages: $selectedPhotos, selectionLimit: 0)
+            }
+            .sheet(isPresented: $showingFilePicker) {
+                FilePickerView(selectedImages: $selectedFiles, allowsMultipleSelection: true)
+            }
+            .sheet(isPresented: $showingNamingDialog) {
+                DocumentNamingView(
+                    documentName: $documentName,
+                    pageCount: getTotalPageCount(),
+                    onSave: {
+                        let imagesToSave = getImagesToSave()
+                        saveDocument(name: documentName, images: imagesToSave)
+                    },
+                    onCancel: {
+                        cancelDocumentNaming()
+                    }
+                )
+            }
+            .onChange(of: scannedPages) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    handleScannedPages(newValue)
+                }
+            }
+            .onChange(of: selectedPhotos) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    handleSelectedPhotos(newValue)
+                }
+            }
+            .onChange(of: selectedFiles) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    handleSelectedFiles(newValue)
+                }
+            }
         }
     }
     
     // MARK: - Action Handling
     
     private func handleAction(_ action: ActionItem) {
-        if action.title == "Merge" {
+        // Actions that require document selection
+        let documentRequiredActions = [
+            "Edit", "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
+            "Sign", "Watermark", "Annotate",
+            "Export"
+        ]
+        
+        if documentRequiredActions.contains(action.title) {
+            selectedToolTitle = action.title
+            showingDocumentSelection = true
+        } else if action.title == "Merge" {
             showingMergeSelection = true
         } else if action.title == "Split" {
             showingSplitSelection = true
+        } else if action.title == "Smart Scan" {
+            showingScanner = true
+        } else if action.title == "Import Photos" {
+            showingPhotoPicker = true
+        } else if action.title == "Import Files" {
+            showingFilePicker = true
         } else {
-            // TODO: Handle other actions
+            // Handle other actions that don't require documents (New Folder, etc.)
             print("Action '\(action.title)' tapped - not yet implemented")
         }
+    }
+    
+    // MARK: - Scanner/Import Handling
+    
+    private func handleScannedPages(_ images: [UIImage]) {
+        scannedPages = images
+        documentName = generateDefaultDocumentName()
+        showingNamingDialog = true
+    }
+    
+    private func handleSelectedPhotos(_ images: [UIImage]) {
+        selectedPhotos = images
+        documentName = generateDefaultDocumentName()
+        showingNamingDialog = true
+    }
+    
+    private func handleSelectedFiles(_ images: [UIImage]) {
+        selectedFiles = images
+        documentName = generateDefaultDocumentName()
+        showingNamingDialog = true
+    }
+    
+    private func generateDefaultDocumentName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return "Document \(formatter.string(from: Date()))"
+    }
+    
+    private func getTotalPageCount() -> Int {
+        if !scannedPages.isEmpty {
+            return scannedPages.count
+        } else if !selectedPhotos.isEmpty {
+            return selectedPhotos.count
+        } else if !selectedFiles.isEmpty {
+            return selectedFiles.count
+        }
+        return 0
+    }
+    
+    private func getImagesToSave() -> [UIImage] {
+        if !scannedPages.isEmpty {
+            return scannedPages
+        } else if !selectedPhotos.isEmpty {
+            return selectedPhotos
+        } else if !selectedFiles.isEmpty {
+            return selectedFiles
+        }
+        return []
+    }
+    
+    private func saveDocument(name: String, images: [UIImage]) {
+        Task {
+            do {
+                guard let userId = await authService.currentUserId() else {
+                    print("Error: No authenticated user")
+                    return
+                }
+                
+                let fileSize = images.reduce(Int64(0)) { total, image in
+                    let imageDataSize = image.jpegData(compressionQuality: 0.8)?.count ?? 0
+                    return total + Int64(imageDataSize)
+                }
+                
+                let document = Document(
+                    userId: userId,
+                    name: name,
+                    pageCount: images.count,
+                    fileSize: fileSize
+                )
+                
+                try await databaseService.createDocument(document, pages: images)
+                
+                print("Successfully saved document '\(name)' with \(images.count) pages")
+                
+                // Clear state and reload documents
+                scannedPages = []
+                selectedPhotos = []
+                selectedFiles = []
+                documentName = ""
+                showingNamingDialog = false
+                viewModel.loadRecentDocuments()
+            } catch {
+                print("Error saving document: \(error)")
+            }
+        }
+    }
+    
+    private func cancelDocumentNaming() {
+        scannedPages = []
+        selectedPhotos = []
+        selectedFiles = []
+        documentName = ""
+        showingNamingDialog = false
     }
     
     // MARK: - Helper Functions
