@@ -18,9 +18,12 @@ struct ScannerApp: App {
                 MainTabView()
                     .environmentObject(authService)
                     .task {
-                        // Sign in anonymously on app launch if not already authenticated
-                        // This allows testing with RLS enabled
-                        if !(await authService.isAuthenticated()) {
+                        // Check authentication state on app launch
+                        if await authService.isAuthenticated() {
+                            // Already authenticated - refresh state to update UI
+                            await authService.refreshAuthState()
+                        } else {
+                            // Not authenticated - sign in anonymously
                             do {
                                 try await authService.signInAnonymously()
                             } catch {
