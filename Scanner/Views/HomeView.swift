@@ -42,6 +42,7 @@ private struct HomeViewContent: View {
         case pdf = "PDF"
         case edit = "Edit"
         case sign = "Sign"
+        case export = "Export"
         case organize = "Organize"
         
         var actions: [ActionItem] {
@@ -55,12 +56,10 @@ private struct HomeViewContent: View {
             case .pdf:
                 return [
                     ActionItem(icon: "doc.on.doc", title: "Merge", color: .blue),
-                    ActionItem(icon: "doc.badge.plus", title: "Split", color: .indigo),
-                    ActionItem(icon: "square.and.arrow.up", title: "Export", color: .green)
+                    ActionItem(icon: "doc.badge.plus", title: "Split", color: .indigo)
                 ]
             case .edit:
                 return [
-                    ActionItem(icon: "pencil", title: "Edit", color: .blue),
                     ActionItem(icon: "crop", title: "Crop", color: .green),
                     ActionItem(icon: "rotate.left", title: "Rotate", color: .orange),
                     ActionItem(icon: "camera.filters", title: "Filters", color: .purple),
@@ -73,9 +72,15 @@ private struct HomeViewContent: View {
                     ActionItem(icon: "textformat", title: "Watermark", color: .cyan),
                     ActionItem(icon: "text.bubble", title: "Annotate", color: .orange)
                 ]
+            case .export:
+                return [
+                    ActionItem(icon: "doc.fill", title: "Export to PDF", color: .red),
+                    ActionItem(icon: "photo", title: "Export to JPEG", color: .blue),
+                    ActionItem(icon: "photo.fill", title: "Export to PNG", color: .purple)
+                ]
             case .organize:
                 return [
-                    ActionItem(icon: "folder.badge.plus", title: "Folder", color: .blue),
+                    ActionItem(icon: "folder.badge.plus", title: "New Folder", color: .blue),
                     ActionItem(icon: "tag", title: "Tags", color: .purple),
                     ActionItem(icon: "star", title: "Favorites", color: .yellow),
                     ActionItem(icon: "magnifyingglass", title: "Search", color: .gray)
@@ -191,9 +196,9 @@ private struct HomeViewContent: View {
     private func handleAction(_ action: ActionItem) {
         // Actions that require document selection
         let documentRequiredActions = [
-            "Edit", "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
+            "Crop", "Rotate", "Filters", "Adjust", "Remove BG",
             "Sign", "Watermark", "Annotate",
-            "Export"
+            "Export to PDF", "Export to JPEG", "Export to PNG"
         ]
         
         if documentRequiredActions.contains(action.title) {
