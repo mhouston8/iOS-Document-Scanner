@@ -1,6 +1,6 @@
 //
 //  SupabaseConfig.swift
-//  Scanner
+//  Axio Scan
 //
 //  Created by Matthew Houston on 12/28/25.
 //
