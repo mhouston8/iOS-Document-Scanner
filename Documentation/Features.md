@@ -1,137 +1,261 @@
-# Document Scanner App - Feature List
+# Axio Scan - Document Scanner App
+
+## Overview
+
+Axio Scan is an iOS document scanning app built with SwiftUI, featuring cloud sync, PDF tools, and a premium subscription model.
 
 ## Architecture & Infrastructure
 
-- **Authentication**: Supabase Auth
-- **Persistence/Storage**: Supabase Database & Storage
-- **Local Storage**: UserDefaults (for onboarding state, preferences)
+| Component | Technology |
+|-----------|------------|
+| **UI Framework** | SwiftUI |
+| **Authentication** | Supabase Auth (hybrid: anonymous + email) |
+| **Database** | Supabase PostgreSQL |
+| **Storage** | Supabase Storage |
+| **In-App Purchases** | RevenueCat |
+| **Local Storage** | UserDefaults (onboarding state, preferences) |
 
-## Data Model & Database Schema
+## Project Structure
 
-### Core Tables
+```
+Scanner/
+├── Configuration/
+│   ├── SupabaseConfig.swift      # Supabase API keys and bucket names
+│   └── RevenueCatConfig.swift    # RevenueCat API key and product IDs
+├── Services/
+│   ├── AuthenticationService.swift    # Auth (anonymous, email, sign out)
+│   ├── DatabaseService.swift          # Document CRUD operations
+│   ├── DatabaseClient.swift           # Protocol for database abstraction
+│   ├── SupabaseDatabaseClient.swift   # Supabase implementation
+│   └── RevenueCatService.swift        # Purchase and subscription handling
+├── Models/
+│   ├── Database/
+│   │   ├── Document.swift
+│   │   ├── DocumentPage.swift
+│   │   ├── Folder.swift
+│   │   ├── Tag.swift
+│   │   └── DocumentTag.swift
+│   ├── AppColors.swift
+│   └── OnboardingPage.swift
+├── ViewModels/
+│   ├── HomeViewModel.swift
+│   ├── DocumentsViewModel.swift
+│   ├── DocumentEditViewModel.swift
+│   └── MainTabViewModel.swift
+├── Views/
+│   ├── MainTabView.swift
+│   ├── HomeView.swift
+│   ├── DocumentsView.swift
+│   ├── DocumentEditView.swift
+│   ├── SettingsView.swift
+│   ├── DocumentToolsView.swift
+│   ├── PhotoEditTools/
+│   │   ├── CropView.swift
+│   │   ├── RotateView.swift
+│   │   ├── FiltersView.swift
+│   │   ├── AdjustView.swift
+│   │   ├── SignView.swift
+│   │   ├── WatermarkView.swift
+│   │   ├── AnnotateView.swift
+│   │   └── RemoveBGView.swift
+│   └── ...
+├── Managers/
+│   ├── DocumentExportManager.swift
+│   └── MergeManager.swift
+└── ScannerApp.swift              # App entry point
+```
 
-#### User (Supabase Auth)
-- Handled by Supabase Auth
-- User ID used as foreign key in other tables
+## Authentication
+
+### Hybrid Auth Model
+
+| State | Description |
+|-------|-------------|
+| **Anonymous** | Auto-created on first launch. Data stored with anonymous UUID. |
+| **Email Linked** | User upgrades via Settings. Same UUID, now with email credentials. |
+
+### Auth Flow
+
+1. **App Launch** → Check if authenticated
+2. **Not authenticated** → Sign in anonymously (auto)
+3. **User taps "Create Account"** → `linkEmail()` adds credentials to existing UUID
+4. **Sign Out** → Signs back in anonymously (new UUID, loses access to old data)
+
+### Key Methods (AuthenticationService)
+
+- `signInAnonymously()` - Create anonymous session
+- `signIn(email:password:)` - Email/password login
+- `signUp(email:password:)` - New account (not anonymous)
+- `linkEmail(email:password:)` - Upgrade anonymous → email account
+- `resetPassword(email:)` - Send password reset email
+- `signOut()` - End session
+
+## Data Model
+
+### Database Schema
 
 #### Document
-- `id` (UUID, primary key)
-- `user_id` (UUID, foreign key to auth.users)
-- `name` (string)
-- `created_at` (timestamp)
-- `updated_at` (timestamp)
-- `folder_id` (UUID, nullable, for organization)
-- `is_favorite` (boolean)
-- `page_count` (integer) - Number of pages in the document
-- `file_size` (bigint) - Total file size in bytes
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key to auth.users |
+| `name` | String | Document name |
+| `created_at` | Timestamp | Creation date |
+| `updated_at` | Timestamp | Last modified |
+| `folder_id` | UUID? | Optional folder reference |
+| `is_favorite` | Boolean | Favorited flag |
+| `page_count` | Integer | Number of pages |
+| `file_size` | BigInt | Total size in bytes |
 
 #### DocumentPage
-- `id` (UUID, primary key)
-- `document_id` (UUID, foreign key to Document)
-- `user_id` (UUID, foreign key to auth.users) - Automatically set to `auth.uid()` via DEFAULT
-- `page_number` (integer, 1-indexed)
-- `image_url` (string, reference to storage)
-- `thumbnail_url` (string, reference to storage)
-- `created_at` (timestamp)
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `document_id` | UUID | Foreign key to Document |
+| `user_id` | UUID | Foreign key to auth.users |
+| `page_number` | Integer | 1-indexed page number |
+| `image_url` | String | Full image storage URL |
+| `thumbnail_url` | String? | Thumbnail storage URL |
+| `created_at` | Timestamp | Creation date |
 
-#### Folder (optional)
-- `id` (UUID, primary key)
-- `user_id` (UUID, foreign key)
-- `name` (string)
-- `parent_id` (UUID, nullable, for nested folders)
-- `created_at` (timestamp)
+#### Folder
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key |
+| `name` | String | Folder name |
+| `parent_id` | UUID? | Parent folder (nested) |
+| `created_at` | Timestamp | Creation date |
 
-#### Tag (optional)
-- `id` (UUID, primary key)
-- `user_id` (UUID, foreign key)
-- `name` (string)
-- `color` (string, optional)
+#### Tag
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key |
+| `name` | String | Tag name |
+| `color` | String? | Tag color |
 
-#### DocumentTag (optional, junction table)
-- `document_id` (UUID)
-- `tag_id` (UUID)
+#### DocumentTag (Junction)
+| Field | Type | Description |
+|-------|------|-------------|
+| `document_id` | UUID | Foreign key |
+| `tag_id` | UUID | Foreign key |
 
 ### Storage Buckets
 
-- `documents` - Full resolution images/PDFs
+- `documents` - Full resolution images
 - `thumbnails` - Thumbnail images
 
-## Core Features (MVP)
+### Row Level Security (RLS)
 
-1. **Scan Documents**
-   - Use VisionKit's `VNDocumentCameraViewController` for native iOS document scanning
-   - Automatic edge detection and multi-page scanning
-   - Camera-based document capture
+All tables have RLS enabled. Users can only access their own data via `auth.uid() = user_id` policies.
 
-2. **View & Organize**
-   - Gallery/list view of all scanned documents
-   - Thumbnail previews
-   - Document metadata (name, date, page count)
-   - Basic organization (folders, tags, favorites)
+## Features
 
-3. **Edit Documents**
-   - Crop documents
-   - Rotate pages
-   - Adjust brightness/contrast
-   - Apply filters
-   - Manual adjustments
+### Implemented ✅
 
-4. **Export**
-   - Export as PDF
-   - Export as images (PNG/JPEG)
-   - Share via iOS share sheet
-   - Save to Photos or Files app
+#### Scan & Import
+- [x] Smart Scan (VisionKit document camera)
+- [x] Import Photos (photo library picker)
+- [x] Import Files (file picker)
 
-5. **Merge Documents**
-   - Select multiple documents
-   - Combine into single PDF
-   - Reorder pages
+#### PDF Tools
+- [x] Merge documents
+- [x] Split documents
 
-## Advanced Features
+#### Edit & Enhance
+- [x] Crop
+- [x] Rotate
+- [x] Filters
+- [x] Adjust (brightness/contrast)
+- [x] Remove Background
 
-6. **Watermark**
-   - Add text watermarks
-   - Add image watermarks
-   - Customizable position and opacity
+#### Sign & Mark
+- [x] Digital signatures
+- [x] Watermark
+- [x] Annotate
 
-7. **Digital Signatures**
-   - Draw signatures
-   - Add signature images
-   - Place signatures on documents
+#### Export
+- [x] Export to PDF
+- [x] Export to JPEG
+- [x] Export to PNG
 
-8. **OCR (Optical Character Recognition)**
-   - Text recognition using Vision framework
-   - Extract text from scanned documents
-   - Searchable PDFs
-   - Copy text from scans
+#### Organization
+- [x] Document list view
+- [x] Thumbnail previews
+- [x] Favorites
+- [x] Delete documents
+- [x] Rename documents
 
-9. **Cloud Sync**
-   - Supabase Storage for document sync
-   - Cross-device synchronization
-   - Automatic backup to cloud
+#### Account
+- [x] Anonymous authentication
+- [x] Email account upgrade
+- [x] Sign in / Sign out
 
-10. **Additional Organization**
-    - Folders/categories
-    - Tags and labels
-    - Search functionality
-    - Favorites/bookmarks
+### Planned 🔲
 
-## Priority Order
+- [ ] OCR (text recognition)
+- [ ] Searchable PDFs
+- [ ] Folders
+- [ ] Tags
+- [ ] Search
+- [ ] Premium subscription features
 
-1. Scanning (essential)
-2. Viewing/organizing
-3. Export
-4. Editing
-5. Merge
-6. Watermark/Sign/OCR (advanced features)
+## Monetization (RevenueCat)
 
+### Configuration
 
-## Markdown Formatting Reference
+```swift
+// RevenueCatConfig.swift
+struct RevenueCatConfig {
+    static let apiKey = "your_api_key"
+    static let premiumEntitlement = "premium"
+    
+    struct Products {
+        static let monthlySubscription = "axioscan_premium_monthly"
+        static let yearlySubscription = "axioscan_premium_yearly"
+    }
+}
+```
 
-- `#` - Level 1 heading (main title)
-- `##` - Level 2 heading (section)
-- `###` - Level 3 heading (subsection)
-- `-` - Bullet point/unordered list
-- `**text**` - Bold text
-- `` `text` `` - Inline code or field name
-- `1.` - Numbered list item
+### Premium Features (Planned)
+
+- Unlimited document storage
+- Cloud sync across devices
+- Advanced editing tools
+- No watermarks on exports
+- Priority support
+
+## App Navigation
+
+### Tab Bar
+
+1. **Home** - Quick actions, recent documents
+2. **Docs** - All documents list
+3. **Scan** (floating button) - Document camera
+4. **Tools** - All document tools
+5. **Settings** - Account, preferences
+
+### Home View Categories
+
+- Scan (Smart Scan, Import Photos, Import Files)
+- PDF (Merge, Split)
+- Edit (Crop, Rotate, Filters, Adjust, Remove BG)
+- Sign (Sign, Watermark, Annotate)
+- Export (PDF, JPEG, PNG)
+- Organize (New Folder, Tags, Favorites, Search)
+
+## Database Migrations
+
+Located in `/Database/migrations/`:
+
+1. `001_create_tables.sql` - Core tables
+2. `002_create_rls_policies.sql` - Row level security
+3. `003_create_storage_policies.sql` - Storage bucket policies
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| Supabase Swift | Database, Auth, Storage |
+| RevenueCat | In-app purchases |
