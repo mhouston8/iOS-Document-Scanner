@@ -9,8 +9,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var authService: AuthenticationService
-    @State private var connectionStatus = "Not tested"
-    @State private var isTestingConnection = false
     @State private var showingCreateAccount = false
     @State private var showingSignIn = false
     @State private var showingSignOutAlert = false
@@ -20,26 +18,6 @@ struct SettingsView: View {
             List {
                 // Account Section
                 accountSection
-                
-                Section("Supabase Connection") {
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(connectionStatus)
-                            .foregroundColor(connectionStatus == "Connected" ? .green : .secondary)
-                    }
-                    
-                    Button(action: testConnection) {
-                        HStack {
-                            if isTestingConnection {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            }
-                            Text(isTestingConnection ? "Testing..." : "Test Connection")
-                        }
-                    }
-                    .disabled(isTestingConnection)
-                }
             }
             .navigationTitle("Settings")
             .onAppear {
@@ -136,35 +114,6 @@ struct SettingsView: View {
                     showingSignOutAlert = true
                 } label: {
                     Text("Sign Out")
-                }
-            }
-        }
-    }
-    
-    private func testConnection() {
-        isTestingConnection = true
-        connectionStatus = "Testing..."
-        
-        Task {
-            do {
-                let client = SupabaseDatabaseClient()
-                // Simple test - try to read documents (will fail if connection is bad)
-                _ = try await client.readDocuments(userId: UUID())
-                
-                await MainActor.run {
-                    connectionStatus = "Connected ✓"
-                    isTestingConnection = false
-                }
-            } catch {
-                await MainActor.run {
-                    // Connection works even if table doesn't exist
-                    // If we get here, connection is established
-                    if error.localizedDescription.contains("relation") || error.localizedDescription.contains("does not exist") {
-                        connectionStatus = "Connected ✓ (tables not created yet)"
-                    } else {
-                        connectionStatus = "Error: \(error.localizedDescription)"
-                    }
-                    isTestingConnection = false
                 }
             }
         }
