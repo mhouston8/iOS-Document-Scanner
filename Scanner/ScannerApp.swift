@@ -10,9 +10,13 @@ import RevenueCat
 
 @main
 struct ScannerApp: App {
+    // Firebase initialization via AppDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @StateObject private var authService = AuthenticationService()
     @StateObject private var revenueCatService = RevenueCatService()
+    @StateObject private var pushNotificationService = PushNotificationService()
     
     init() {
         // Configure RevenueCat on app launch
@@ -26,6 +30,7 @@ struct ScannerApp: App {
                 MainTabView()
                     .environmentObject(authService)
                     .environmentObject(revenueCatService)
+                    .environmentObject(pushNotificationService)
                     .task {
                         // Check authentication state on app launch
                         if await authService.isAuthenticated() {
@@ -47,6 +52,9 @@ struct ScannerApp: App {
                         
                         // Check subscription status
                         await revenueCatService.checkSubscriptionStatus()
+                        
+                        // Check push notification permission status
+                        await pushNotificationService.checkPermissionStatus()
                     }
             } else {
                 OnboardingView()

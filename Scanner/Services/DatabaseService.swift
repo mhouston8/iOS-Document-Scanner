@@ -83,4 +83,14 @@ class DatabaseService {
     func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws {
         try await client.updateDocumentPagesInDatabase(pages)
     }
+    
+    // MARK: - User Device Operations
+    
+    func upsertUserDevice(_ device: UserDevice) async throws {
+        try await client.upsertUserDevice(device)
+    }
+    
+    func deleteUserDevice(userId: UUID, fcmToken: String) async throws {
+        try await client.deleteUserDevice(userId: userId, fcmToken: fcmToken)
+    }
 }

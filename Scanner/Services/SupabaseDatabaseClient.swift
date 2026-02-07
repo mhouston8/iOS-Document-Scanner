@@ -422,9 +422,44 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
             
             print("Updated \(pages.count) DocumentPage(s)")
         } catch {
-            let error = DatabaseError.updateFailed("Failed to update DocumentPages: \(error.localizedDescription)")
+            let error = DatabaseError.insertFailed("Failed to update DocumentPages: \(error.localizedDescription)")
             print("ERROR [updateDocumentPages]: \(error.localizedDescription)")
             print("ERROR [updateDocumentPages]: Original error: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - User Device Operations
+    
+    func upsertUserDevice(_ device: UserDevice) async throws {
+        do {
+            // Upsert: insert or update if exists (based on unique constraint)
+            try await client.database
+                .from("UserDevice")
+                .upsert(device, onConflict: "user_id,fcm_token")
+                .execute()
+            
+            print("Upserted UserDevice for user: \(device.userId)")
+        } catch {
+            let error = DatabaseError.insertFailed("Failed to upsert UserDevice: \(error.localizedDescription)")
+            print("ERROR [upsertUserDevice]: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    func deleteUserDevice(userId: UUID, fcmToken: String) async throws {
+        do {
+            try await client.database
+                .from("UserDevice")
+                .delete()
+                .eq("user_id", value: userId.uuidString)
+                .eq("fcm_token", value: fcmToken)
+                .execute()
+            
+            print("Deleted UserDevice for user: \(userId)")
+        } catch {
+            let error = DatabaseError.deleteFailed("Failed to delete UserDevice: \(error.localizedDescription)")
+            print("ERROR [deleteUserDevice]: \(error.localizedDescription)")
             throw error
         }
     }

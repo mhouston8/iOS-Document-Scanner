@@ -13,17 +13,33 @@
 		3D9261DE2F07278D00F963AD /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9261DD2F07278D00F963AD /* Supabase */; };
 		3D9D0C5E2F36783500AAFD25 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9D0C5D2F36783500AAFD25 /* RevenueCat */; };
 		3D9D0C602F36783500AAFD25 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9D0C5F2F36783500AAFD25 /* RevenueCatUI */; };
+		3D9D0C722F37A29100AAFD25 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3D9D0C712F37A29100AAFD25 /* GoogleService-Info.plist */; };
+		3D9D0C752F37A3CB00AAFD25 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9D0C742F37A3CB00AAFD25 /* FirebaseMessaging */; };
 		3DA38FE82F1564340063D6CC /* Mantis in Frameworks */ = {isa = PBXBuildFile; productRef = 3DA38FE72F1564340063D6CC /* Mantis */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3D92612C2F01F54200F963AD /* Scanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D9261402F01F54200F963AD /* Documentation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Documentation; sourceTree = "<group>"; };
+		3D9D0C712F37A29100AAFD25 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3D9D0C702F37A1C800AAFD25 /* Exceptions for "Scanner" folder in "Scanner" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3D92612B2F01F54200F963AD /* Scanner */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3D92612E2F01F54200F963AD /* Scanner */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3D9D0C702F37A1C800AAFD25 /* Exceptions for "Scanner" folder in "Scanner" target */,
+			);
 			path = Scanner;
 			sourceTree = "<group>";
 		};
@@ -34,6 +50,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D9D0C752F37A3CB00AAFD25 /* FirebaseMessaging in Frameworks */,
 				3DA38FE82F1564340063D6CC /* Mantis in Frameworks */,
 				3D9261DE2F07278D00F963AD /* Supabase in Frameworks */,
 				3D9D0C602F36783500AAFD25 /* RevenueCatUI in Frameworks */,
@@ -50,6 +67,7 @@
 		3D9261232F01F54200F963AD = {
 			isa = PBXGroup;
 			children = (
+				3D9D0C712F37A29100AAFD25 /* GoogleService-Info.plist */,
 				3D92612E2F01F54200F963AD /* Scanner */,
 				3D9261402F01F54200F963AD /* Documentation */,
 				3D92612D2F01F54200F963AD /* Products */,
@@ -91,6 +109,7 @@
 				3DA38FE72F1564340063D6CC /* Mantis */,
 				3D9D0C5D2F36783500AAFD25 /* RevenueCat */,
 				3D9D0C5F2F36783500AAFD25 /* RevenueCatUI */,
+				3D9D0C742F37A3CB00AAFD25 /* FirebaseMessaging */,
 			);
 			productName = Scanner;
 			productReference = 3D92612C2F01F54200F963AD /* Scanner.app */;
@@ -124,6 +143,7 @@
 				3D9261D62F07278D00F963AD /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				3DA38FE62F1564340063D6CC /* XCRemoteSwiftPackageReference "Mantis" */,
 				3D9D0C5C2F36783500AAFD25 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				3D9D0C732F37A3CB00AAFD25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D92612D2F01F54200F963AD /* Products */;
@@ -140,6 +160,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D9D0C722F37A29100AAFD25 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,11 +303,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Scanner/Scanner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P7VQ69R986;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Scanner/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Axio Scan needs access to your Camera to scan documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -315,11 +338,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Scanner/Scanner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P7VQ69R986;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Scanner/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Axio Scan needs access to your Camera to scan documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -383,6 +408,14 @@
 				minimumVersion = 5.57.2;
 			};
 		};
+		3D9D0C732F37A3CB00AAFD25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.9.0;
+			};
+		};
 		3DA38FE62F1564340063D6CC /* XCRemoteSwiftPackageReference "Mantis" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/guoyingtao/Mantis";
@@ -423,6 +456,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3D9D0C5C2F36783500AAFD25 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCatUI;
+		};
+		3D9D0C742F37A3CB00AAFD25 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3D9D0C732F37A3CB00AAFD25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 		3DA38FE72F1564340063D6CC /* Mantis */ = {
 			isa = XCSwiftPackageProductDependency;

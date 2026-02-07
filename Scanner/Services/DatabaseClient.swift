@@ -20,4 +20,8 @@ protocol DatabaseClientProtocol {
     func readDocumentThumbnail(documentId: UUID) async throws -> DocumentPage?
     func updateDocumentPageInStorage(_ page: DocumentPage, image: UIImage) async throws -> (imageUrl: String, thumbnailUrl: String)
     func updateDocumentPagesInDatabase(_ pages: [DocumentPage]) async throws
+    
+    // MARK: - User Device Operations
+    func upsertUserDevice(_ device: UserDevice) async throws
+    func deleteUserDevice(userId: UUID, fcmToken: String) async throws
 }
