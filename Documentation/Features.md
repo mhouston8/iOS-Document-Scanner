@@ -141,6 +141,17 @@ Scanner/
 | `document_id` | UUID | Foreign key |
 | `tag_id` | UUID | Foreign key |
 
+#### UserDevice
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key to auth.users |
+| `fcm_token` | String | Firebase Cloud Messaging token |
+| `platform` | String | 'ios' or 'android' |
+| `device_name` | String? | Device name (e.g., "iPhone 15 Pro") |
+| `created_at` | Timestamp | Creation date |
+| `updated_at` | Timestamp | Last modified |
+
 ### Storage Buckets
 
 - `documents` - Full resolution images
@@ -252,6 +263,7 @@ Located in `/Database/migrations/`:
 1. `001_create_tables.sql` - Core tables
 2. `002_create_rls_policies.sql` - Row level security
 3. `003_create_storage_policies.sql` - Storage bucket policies
+4. `004_create_user_device_table.sql` - Push notification tokens
 
 ## Dependencies
 
