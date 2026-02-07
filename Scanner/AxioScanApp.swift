@@ -9,7 +9,7 @@ import SwiftUI
 import RevenueCat
 
 @main
-struct ScannerApp: App {
+struct AxioScanApp: App {
     // Firebase initialization via AppDelegate
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
@@ -53,7 +53,9 @@ struct ScannerApp: App {
                         // Check subscription status
                         await revenueCatService.checkSubscriptionStatus()
                         
-                        // Request push notification permission
+                        // Configure and request push notifications
+                        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+                        pushNotificationService.configure(authService: authService, databaseService: databaseService)
                         let _ = await pushNotificationService.requestPermission()
                     }
             } else {

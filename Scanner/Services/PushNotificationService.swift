@@ -16,10 +16,25 @@ class PushNotificationService: ObservableObject {
     @Published var fcmToken: String?
     @Published var permissionStatus: UNAuthorizationStatus = .notDetermined
     
+    private var authService: AuthenticationService?
+    private var databaseService: DatabaseService?
     private var tokenObserver: NSObjectProtocol?
     
     init() {
         setupTokenObserver()
+    }
+    
+    /// Configure with dependencies for auto-saving tokens
+    func configure(authService: AuthenticationService, databaseService: DatabaseService) {
+        self.authService = authService
+        self.databaseService = databaseService
+        
+        // If we already have a token, save it now
+        if fcmToken != nil {
+            Task {
+                await saveTokenToDatabase()
+            }
+        }
     }
     
     private func setupTokenObserver() {
@@ -33,7 +48,10 @@ class PushNotificationService: ObservableObject {
                   let token = notification.userInfo?["token"] as? String else { return }
             
             Task { @MainActor [weak self] in
-                self?.fcmToken = token
+                guard let self = self else { return }
+                self.fcmToken = token
+                // Auto-save if configured
+                await self.saveTokenToDatabase()
             }
         }
     }
@@ -76,9 +94,20 @@ class PushNotificationService: ObservableObject {
     // MARK: - Token Management
     
     /// Save FCM token to database for the current user
-    func saveTokenToDatabase(userId: UUID, databaseService: DatabaseService) async {
+    func saveTokenToDatabase() async {
         guard let token = fcmToken else {
             print("No FCM token available to save")
+            return
+        }
+        
+        guard let authService = authService,
+              let databaseService = databaseService else {
+            print("PushNotificationService not configured - call configure() first")
+            return
+        }
+        
+        guard let userId = await authService.currentUserId() else {
+            print("No authenticated user to save FCM token for")
             return
         }
         
@@ -100,8 +129,19 @@ class PushNotificationService: ObservableObject {
     }
     
     /// Remove FCM token from database (call on sign out)
-    func removeTokenFromDatabase(userId: UUID, databaseService: DatabaseService) async {
+    func removeTokenFromDatabase() async {
         guard let token = fcmToken else { return }
+        
+        guard let authService = authService,
+              let databaseService = databaseService else {
+            print("PushNotificationService not configured")
+            return
+        }
+        
+        guard let userId = await authService.currentUserId() else {
+            print("No authenticated user to remove FCM token for")
+            return
+        }
         
         do {
             try await databaseService.deleteUserDevice(userId: userId, fcmToken: token)
