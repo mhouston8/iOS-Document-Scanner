@@ -53,8 +53,8 @@ struct ScannerApp: App {
                         // Check subscription status
                         await revenueCatService.checkSubscriptionStatus()
                         
-                        // Check push notification permission status
-                        await pushNotificationService.checkPermissionStatus()
+                        // Request push notification permission
+                        let _ = await pushNotificationService.requestPermission()
                     }
             } else {
                 OnboardingView()

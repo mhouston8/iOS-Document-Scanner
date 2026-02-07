@@ -362,9 +362,9 @@ private struct HomeViewContent: View {
     private var upgradeBanner: some View {
         Button(action: { showingPaywall = true }) {
             HStack(spacing: 16) {
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                    .foregroundColor(.yellow)
+//                Image(systemName: "crown.fill")
+//                    .font(.title2)
+//                    .foregroundColor(.yellow)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Upgrade to Premium")
@@ -382,6 +382,7 @@ private struct HomeViewContent: View {
                     .foregroundColor(.white.opacity(0.8))
             }
             .padding()
+            .padding(.vertical, 10)
             .background(
                 LinearGradient(
                     colors: [.purple, .blue],
