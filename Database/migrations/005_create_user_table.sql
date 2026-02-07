@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS "User" (
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_user_is_premium ON "User"(is_premium_subscriber);
 
+-- Create function to update updated_at timestamp (if not exists)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create trigger to auto-update updated_at
 CREATE TRIGGER update_user_updated_at
     BEFORE UPDATE ON "User"
@@ -35,7 +44,7 @@ CREATE POLICY "Users can update their own profile"
     ON "User" FOR UPDATE
     USING (auth.uid() = id);
 
--- Optional: Auto-create User row when someone signs up
+-- Auto-create User row when someone signs up
 -- This trigger runs after a new user is added to auth.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$

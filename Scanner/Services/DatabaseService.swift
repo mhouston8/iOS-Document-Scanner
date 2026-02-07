@@ -93,4 +93,27 @@ class DatabaseService {
     func deleteUserDevice(userId: UUID, fcmToken: String) async throws {
         try await client.deleteUserDevice(userId: userId, fcmToken: fcmToken)
     }
+    
+    // MARK: - User Operations
+    
+    func createUser(_ user: User) async throws {
+        try await client.createUser(user)
+    }
+    
+    func getUser(userId: UUID) async throws -> User? {
+        try await client.getUser(userId: userId)
+    }
+    
+    func updateUser(_ user: User) async throws {
+        try await client.updateUser(user)
+    }
+    
+    /// Creates a User row if one doesn't exist for this userId
+    func createUserIfNeeded(userId: UUID) async throws {
+        let existingUser = try await getUser(userId: userId)
+        if existingUser == nil {
+            let newUser = User(id: userId)
+            try await createUser(newUser)
+        }
+    }
 }

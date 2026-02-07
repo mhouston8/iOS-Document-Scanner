@@ -24,4 +24,9 @@ protocol DatabaseClientProtocol {
     // MARK: - User Device Operations
     func upsertUserDevice(_ device: UserDevice) async throws
     func deleteUserDevice(userId: UUID, fcmToken: String) async throws
+    
+    // MARK: - User Operations
+    func createUser(_ user: User) async throws
+    func getUser(userId: UUID) async throws -> User?
+    func updateUser(_ user: User) async throws
 }

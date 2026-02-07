@@ -32,6 +32,8 @@ struct AxioScanApp: App {
                     .environmentObject(revenueCatService)
                     .environmentObject(pushNotificationService)
                     .task {
+                        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
+                        
                         // Check authentication state on app launch
                         if await authService.isAuthenticated() {
                             // Already authenticated - refresh state to update UI
@@ -45,6 +47,15 @@ struct AxioScanApp: App {
                             }
                         }
                         
+                        // Create User row if needed (for new users)
+                        if let userId = await authService.currentUserId() {
+                            do {
+                                try await databaseService.createUserIfNeeded(userId: userId)
+                            } catch {
+                                print("Failed to create user: \(error)")
+                            }
+                        }
+                        
                         // Link RevenueCat to Supabase user ID
                         if let userId = await authService.currentUserId() {
                             await revenueCatService.connectUserToRevenueCat(userId: userId.uuidString)
@@ -54,7 +65,6 @@ struct AxioScanApp: App {
                         await revenueCatService.checkSubscriptionStatus()
                         
                         // Configure and request push notifications
-                        let databaseService = DatabaseService(client: SupabaseDatabaseClient())
                         pushNotificationService.configure(authService: authService, databaseService: databaseService)
                         let _ = await pushNotificationService.requestPermission()
                     }

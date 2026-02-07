@@ -464,4 +464,55 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
         }
     }
     
+    // MARK: - User Operations
+    
+    func createUser(_ user: User) async throws {
+        do {
+            try await client.database
+                .from("User")
+                .insert(user)
+                .execute()
+            
+            print("Created User: \(user.id)")
+        } catch {
+            let error = DatabaseError.insertFailed("Failed to create User: \(error.localizedDescription)")
+            print("ERROR [createUser]: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    func getUser(userId: UUID) async throws -> User? {
+        do {
+            let response = try await client.database
+                .from("User")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+            
+            let user = try JSONDecoder().decode(User.self, from: response.data)
+            return user
+        } catch {
+            // Return nil if user not found (not an error)
+            print("User not found or error: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    func updateUser(_ user: User) async throws {
+        do {
+            try await client.database
+                .from("User")
+                .update(user)
+                .eq("id", value: user.id.uuidString)
+                .execute()
+            
+            print("Updated User: \(user.id)")
+        } catch {
+            let error = DatabaseError.updateFailed("Failed to update User: \(error.localizedDescription)")
+            print("ERROR [updateUser]: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
 }
