@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RevenueCatUI
 
 struct HomeView: View {
     @EnvironmentObject var authService: AuthenticationService
@@ -17,11 +18,13 @@ struct HomeView: View {
 
 private struct HomeViewContent: View {
     let authService: AuthenticationService
+    @EnvironmentObject var revenueCatService: RevenueCatService
     @StateObject private var viewModel: HomeViewModel
     @State private var selectedCategory: Category = .scan
     @State private var editingDocument: Document? = nil
     @State private var showingMergeSelection = false
     @State private var showingSplitSelection = false
+    @State private var showingPaywall = false
     
     // Tool-related state (matching DocumentToolsView)
     @State private var selectedToolTitle: String?
@@ -106,6 +109,11 @@ private struct HomeViewContent: View {
                     // Header
                     headerSection
                     
+                    // Upgrade Banner (only for non-premium users)
+                    if !revenueCatService.isPremium {
+                        upgradeBanner
+                    }
+                    
                     // Category Tabs
                     categoryTabsSection
                     
@@ -187,6 +195,9 @@ private struct HomeViewContent: View {
                 if !newValue.isEmpty {
                     handleSelectedFiles(newValue)
                 }
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
             }
         }
     }
@@ -332,6 +343,43 @@ private struct HomeViewContent: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    // MARK: - Upgrade Banner
+    
+    private var upgradeBanner: some View {
+        Button(action: { showingPaywall = true }) {
+            HStack(spacing: 16) {
+                Image(systemName: "crown.fill")
+                    .font(.title2)
+                    .foregroundColor(.yellow)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Upgrade to Premium")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Unlock all features and sync across devices")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding()
+            .background(
+                LinearGradient(
+                    colors: [.purple, .blue],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Category Tabs
