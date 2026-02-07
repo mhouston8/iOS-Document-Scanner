@@ -15,11 +15,11 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
+            // Background gradient (adapts to light/dark mode)
             LinearGradient(
                 colors: [
-                    AppColors.backgroundDarkStart,
-                    AppColors.backgroundDarkEnd
+                    AppColors.backgroundGradientStart,
+                    AppColors.backgroundGradientEnd
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

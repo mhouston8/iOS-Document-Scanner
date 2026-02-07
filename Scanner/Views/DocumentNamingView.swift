@@ -20,8 +20,8 @@ struct DocumentNamingView: View {
                 // Background gradient
                 LinearGradient(
                     colors: [
-                        AppColors.backgroundDarkStart,
-                        AppColors.backgroundDarkEnd
+                        AppColors.backgroundGradientStart,
+                        AppColors.backgroundGradientEnd
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
