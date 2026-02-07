@@ -39,6 +39,14 @@ struct ScannerApp: App {
                                 print("Failed to sign in anonymously: \(error)")
                             }
                         }
+                        
+                        // Link RevenueCat to Supabase user ID
+                        if let userId = await authService.currentUserId() {
+                            await revenueCatService.connectUserToRevenueCat(userId: userId.uuidString)
+                        }
+                        
+                        // Check subscription status
+                        await revenueCatService.checkSubscriptionStatus()
                     }
             } else {
                 OnboardingView()
