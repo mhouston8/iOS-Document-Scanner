@@ -198,6 +198,18 @@ private struct HomeViewContent: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+                    .onPurchaseCompleted { customerInfo in
+                        Task {
+                            await revenueCatService.checkSubscriptionStatus()
+                        }
+                        showingPaywall = false
+                    }
+                    .onRestoreCompleted { customerInfo in
+                        Task {
+                            await revenueCatService.checkSubscriptionStatus()
+                        }
+                        showingPaywall = false
+                    }
             }
         }
     }
