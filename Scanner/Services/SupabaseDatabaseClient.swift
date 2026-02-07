@@ -490,7 +490,23 @@ class SupabaseDatabaseClient: DatabaseClientProtocol {
                 .single()
                 .execute()
             
-            let user = try JSONDecoder().decode(User.self, from: response.data)
+            let decoder = JSONDecoder()
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                // Fallback for dates without fractional seconds
+                formatter.formatOptions = [.withInternetDateTime]
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
+            }
+            let user = try decoder.decode(User.self, from: response.data)
             return user
         } catch {
             // Return nil if user not found (not an error)

@@ -116,4 +116,14 @@ class DatabaseService {
             try await createUser(newUser)
         }
     }
+    
+    /// Saves the subscription status to the User table
+    func saveSubscriptionStatusToDatabase(userId: UUID, isPremium: Bool) async throws {
+        if var user = try await getUser(userId: userId) {
+            user.isPremiumSubscriber = isPremium
+            user.updatedAt = Date()
+            try await updateUser(user)
+            print("Saved subscription status: \(isPremium) for user: \(userId)")
+        }
+    }
 }

@@ -61,8 +61,15 @@ struct AxioScanApp: App {
                             await revenueCatService.connectUserToRevenueCat(userId: userId.uuidString)
                         }
                         
-                        // Check subscription status
+                        // Check subscription status and save to database
                         await revenueCatService.checkSubscriptionStatus()
+                        if let userId = await authService.currentUserId() {
+                            do {
+                                try await databaseService.saveSubscriptionStatusToDatabase(userId: userId, isPremium: revenueCatService.isPremium)
+                            } catch {
+                                print("Failed to save subscription status: \(error)")
+                            }
+                        }
                         
                         // Configure and request push notifications
                         pushNotificationService.configure(authService: authService, databaseService: databaseService)

@@ -201,12 +201,14 @@ private struct HomeViewContent: View {
                     .onPurchaseCompleted { customerInfo in
                         Task {
                             await revenueCatService.checkSubscriptionStatus()
+                            await saveSubscriptionStatusToDatabase()
                         }
                         showingPaywall = false
                     }
                     .onRestoreCompleted { customerInfo in
                         Task {
                             await revenueCatService.checkSubscriptionStatus()
+                            await saveSubscriptionStatusToDatabase()
                         }
                         showingPaywall = false
                     }
@@ -335,6 +337,16 @@ private struct HomeViewContent: View {
         selectedFiles = []
         documentName = ""
         showingNamingDialog = false
+    }
+    
+    private func saveSubscriptionStatusToDatabase() async {
+        if let userId = await authService.currentUserId() {
+            do {
+                try await databaseService.saveSubscriptionStatusToDatabase(userId: userId, isPremium: revenueCatService.isPremium)
+            } catch {
+                print("Failed to save subscription status: \(error)")
+            }
+        }
     }
     
     // MARK: - Helper Functions
