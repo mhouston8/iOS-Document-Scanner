@@ -9,7 +9,7 @@ import Foundation
 
 struct RevenueCatConfig {
     // RevenueCat API Key (from RevenueCat Dashboard > Project > API Keys)
-    static let apiKey = "test_SwpvBIRrhXdppKAZMUYPvTvKmeW"
+    static let apiKey = "appl_UBslcfxAFcmvYwiMkjweWaDLqoR"
     
     // Entitlement Identifiers (configured in RevenueCat Dashboard)
     static let premiumEntitlement = "Axio Scan Premium"
